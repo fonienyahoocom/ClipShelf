@@ -1,0 +1,23 @@
+﻿ClipShelf v2.8.0 Experimental - Build Harness 3 source/package check
+=====================================================================
+
+Scope: build-launcher hotfix only. Product/runtime source is intentionally unchanged from v2.8.0 Experimental Pointer Text Capture.
+
+Observed incident:
+- The failing v2.8.0 BUILD_EXE.cmd was UTF-8 with BOM and LF-only line endings.
+- The previous user-verified v2.6.6 Build Harness 2 launcher used CRLF line endings.
+- Windows CMD output showed the UTF-8 BOM rendered as garbage before @echo and many later lines were parsed as truncated/corrupted commands.
+
+Hotfix:
+- BUILD_EXE.cmd rewritten as ASCII-only, BOM-free, CRLF.
+- Unicode build-log filename remains in the BOM-marked PowerShell harness, not the CMD bootstrap.
+- No ClipShelf Core/UI/ExperimentalCapture C# or XAML source changed.
+
+Validation performed in packaging environment:
+- BUILD_EXE.cmd contains only ASCII bytes.
+- BUILD_EXE.cmd starts with @echo off (no BOM).
+- every BUILD_EXE.cmd line uses CRLF.
+- ZIP integrity check passes.
+- product source tree hashes match original v2.8.0 package.
+
+Windows BUILD SUCCESS remains the runtime/build validation gate.

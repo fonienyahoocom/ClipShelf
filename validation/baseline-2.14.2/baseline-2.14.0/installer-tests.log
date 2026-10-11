@@ -1,0 +1,11 @@
+PASS: running Core mutex blocks silent install with exit code 2 (preceding command)
+PASS: fresh install matches all 928 payload files
+PASS: uninstaller created
+PASS: in-place upgrade exits successfully
+PASS: upgrade preserves history bytes and user data
+PASS: upgraded files match release payload
+PASS: uninstall exits successfully
+PASS: uninstall removes all exact shipped payload files
+PASS: uninstall preserves unrelated file in program directory
+PASS: uninstall preserves personal history and user data
+PASS: uninstall removes Add/Remove Programs entry

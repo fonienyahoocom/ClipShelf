@@ -1,0 +1,30 @@
+PASS: ClipShelf.exe is a Windows x64 PE executable
+PASS: ClipShelf.exe has 2.14.1.0 version resources
+PASS: ui/ClipShelf.UI.exe is a Windows x64 PE executable
+PASS: ui/ClipShelf.UI.exe has 2.14.1.0 version resources
+PASS: Setup is an amd64 Unicode NSIS executable
+PASS: Setup has 2.14.1 product version resources
+PASS: compiled About UI and Core crash-report strings both identify 2.14.1
+PASS: ClipShelf bundles .NET and Windows Desktop runtime
+PASS: ClipShelf includes required runtime files
+PASS: ClipShelf.UI bundles .NET and Windows Desktop runtime
+PASS: ClipShelf.UI includes required runtime files
+PASS: WPF managed and native runtime are included
+PASS: published payload has 930 files
+PASS: all 930 installer payload files match published bytes by SHA-256
+PASS: installer contains its generated uninstaller
+PASS: package includes no personal history.json
+PASS: uninstall manifest removes exactly the shipped program payload
+PASS: uninstall payload paths stay inside INSTDIR
+PASS: installer upgrade, mutex, data retention and startup logic are unchanged from 2.14.0
+PASS: installer source keeps program and personal data paths separate (static check)
+PASS: Core logic, settings, storage, backup and safe-state remain baseline; crash report changes version only
+PASS: shared runtime binaries are byte-identical to 2.14.0; only application files changed
+PASS: ClipShelf.deps.json changes only application version metadata
+PASS: ui/ClipShelf.UI.deps.json changes only application version metadata
+PASS: payload paths retain 2.14.0 layout with only build/history documents added
+PASS: BUILD_EXE.cmd preserves Windows CRLF
+PASS: BUILD_SETUP.cmd preserves Windows CRLF
+PASS: BUILD_EXE.ps1 preserves UTF-8 BOM for Windows PowerShell
+PASS: BUILD_SETUP.ps1 preserves UTF-8 BOM for Windows PowerShell
+ALL 29 OFFLINE PACKAGE CHECKS PASSED

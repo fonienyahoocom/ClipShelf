@@ -1,0 +1,12 @@
+ClipShelf v2.11.0 source check
+
+OCR active code/packaging: REMOVED
+Ctrl+Alt+O ClipShelf registration: REMOVED
+Ctrl+~ Core hotkey: RETAINED
+QuickToggleUI event: ADDED
+shortcut warm standby: 300000 ms (5 minutes)
+persistence schema: UNCHANGED
+Backup/import preview: RETAINED
+Safe Delete lifecycle: RETAINED
+
+Windows build/runtime remains user-authoritative.

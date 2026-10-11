@@ -1,0 +1,9 @@
+ClipShelf v2.11.0 real-machine acceptance
+
+1. BUILD_EXE.cmd -> BUILD SUCCESS.
+2. Launch ClipShelf_READY\ClipShelf.exe.
+3. Existing History/categories/settings remain.
+4. No OCR UI/tray/bubble; Ctrl+Alt+O no longer owned by ClipShelf.
+5. Ctrl+~ open -> hide -> wait 2-10 seconds -> Ctrl+~ wake. Repeat wake should be clearly faster.
+6. Hidden UI may stay warm up to 5 minutes, then ClipShelf.UI exits while ClipShelf.exe remains.
+7. Backup menu and Import Preview still open.

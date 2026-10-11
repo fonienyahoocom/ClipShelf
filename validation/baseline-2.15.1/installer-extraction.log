@@ -1,0 +1,24 @@
+
+7-Zip 23.01 (x64) : Copyright (c) 1999-2023 Igor Pavlov : 2023-06-20
+ 64-bit locale=C.UTF-8 Threads:9 OPEN_MAX:16384
+
+Scanning the drive for archives:
+1 file, 49760421 bytes (48 MiB)
+
+Extracting archive: deliverables/ClipShelf-2.15.1-Setup.exe
+--
+Path = deliverables/ClipShelf-2.15.1-Setup.exe
+Type = Nsis
+Physical Size = 49760421
+Method = LZMA:23
+Solid = +
+64-bit = +
+Headers Size = 68060
+Embedded Stub Size = 120832
+SubType = NSIS-3 Unicode 64-bit
+
+Everything is Ok
+
+Files: 936
+Size:       336185422
+Compressed: 49760421

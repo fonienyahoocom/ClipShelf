@@ -1,0 +1,8 @@
+Build host: Linux; no Windows native GUI.
+.NET SDK 8.0.425 / included runtime 8.0.31.
+Commands run from workspace:
+.tools/dotnet/dotnet publish work/ClipShelf-2.15.0/ClipShelf.Core/ClipShelf.Core.csproj -c Release -r win-x64 --self-contained true --no-restore -p:EnableWindowsTargeting=true -o work/ClipShelf-2.15.0/release
+.tools/dotnet/dotnet publish work/ClipShelf-2.15.0/ClipShelf/ClipShelf.csproj -c Release -r win-x64 --self-contained true --no-restore -p:EnableWindowsTargeting=true -o work/ClipShelf-2.15.0/release/ui
+.tools/dotnet/dotnet run --project work/ClipShelf-2.15.0/Tests/Tests.csproj -c Release
+NSIS 3.09 with PAYLOAD_DIR=published release, OUTPUT_FILE=ClipShelf-2.15.0-Setup.exe.
+7-Zip 23.01 extract installer; verify_release.py checks all payload bytes.

@@ -1,0 +1,4 @@
+MSBuild version 17.11.48+02bf66295 for .NET
+  Determining projects to restore...
+  Restored /workspace/scratch/8ececefb25be/work/ClipShelf-2.14.1/Tests/Tests.csproj (in 84 ms).
+  Tests -> /workspace/scratch/8ececefb25be/work/ClipShelf-2.14.1/Tests/bin/Release/net8.0/Tests.dll

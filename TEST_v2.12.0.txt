@@ -1,0 +1,14 @@
+ClipShelf v2.12.0 real-machine acceptance
+
+1. BUILD_EXE.cmd -> BUILD SUCCESS.
+2. Launch ClipShelf_READY\ClipShelf.exe.
+3. Existing History/categories/settings remain.
+4. Drag-select text inside a text card: native text selection still works.
+5. Without pressing 多選 first, Ctrl+click card blank/chrome toggles only that item and opens multiselect mode.
+6. Click one card normally, then Shift+click a later card blank/chrome: contiguous range is marked.
+7. Ctrl+click non-adjacent cards: skip-select works; Ctrl+Shift adds a range.
+8. Marked cards are visibly highlighted and bulk action counts match.
+9. Rapidly click trash on successive History rows: rows may delete quickly, but no accidental copy/paste and UI must not close.
+10. Genuine double-click on non-interactive card chrome still pastes/hides as before.
+11. Ctrl+~ warm wake from v2.11.0 still works.
+12. Backup menu / Import Preview / Safe Delete remain usable.

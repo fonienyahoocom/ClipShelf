@@ -1,0 +1,35 @@
+﻿ClipShelf v2.8.1 Experimental - Pointer Context Capture
+
+Static source checks:
+- Base: v2.8.0 Experimental Capture Route Fix 1.
+- ClipShelf.Core is byte-identical to that current working baseline; no Core source file changed.
+- Existing local UIA route remains RangeFromPoint -> ExpandToEnclosingUnit.
+- Added best-effort Paragraph endpoint expansion via MoveEndpointByUnit:
+  * current paragraph
+  * +/- 1 paragraph context
+  * +/- 2 paragraph context
+  * +/- 5 paragraph large block, bounded to about 8000 characters
+- Preview prefers +/- 1 paragraph when available and shows character count.
+- Provider failure in larger range expansion only omits that larger choice; it does not activate fallback.
+- No OCR engine/API, IA2/MSAA, cloud API, geometry search, background screen scanning, or app-specific patch was implemented.
+- NEXT_OCR_STRATEGY.md freezes the approved next-stage OCR design: explicit local on-demand helper, no resident OCR process/model, no background scanning, exit immediately after capture.
+- BUILD_EXE.ps1 copies NEXT_OCR_STRATEGY.md into ClipShelf_READY for future handoff.
+- BUILD_EXE.cmd remains ASCII, no BOM, CRLF.
+- XAML/csproj XML parsing passed in the packaging environment.
+- Windows WPF/.NET build cannot be executed in this environment; BUILD_EXE.cmd on the user's Windows machine remains the build authority.
+
+Files changed/added from v2.8.0 Route Fix 1:
+- CHANGED: BUILD_EXE.cmd
+- CHANGED: BUILD_EXE.ps1
+- CHANGED: ClipShelf.ExperimentalCapture/ClipShelf.ExperimentalCapture.csproj
+- CHANGED: ClipShelf.ExperimentalCapture/Program.cs
+- CHANGED: ClipShelf/ClipShelf.csproj
+- CHANGED: ClipShelf/ExperimentalCaptureDialog.xaml
+- CHANGED: ClipShelf/ExperimentalCaptureDialog.xaml.cs
+- CHANGED: ClipShelf/ExperimentalTextCaptureResult.cs
+- CHANGED: ClipShelf/SettingsDialog.xaml
+- CHANGED: DEVELOPMENT_HISTORY.md
+- ADDED: NEXT_OCR_STRATEGY.md
+- CHANGED: README.txt
+- ADDED: README_v2.8.1_EXPERIMENTAL.txt
+- ADDED: TEST_v2.8.1_EXPERIMENTAL.txt

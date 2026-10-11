@@ -1,0 +1,29 @@
+MSBuild version 17.11.48+02bf66295 for .NET
+Build started 10/11/2026 15:16:00.
+Project "/workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/Tests/Tests.csproj" on node 1 (Restore target(s)).
+_GetAllRestoreProjectPathItems:
+  Determining projects to restore...
+Restore:
+  X.509 certificate chain validation will use the fallback certificate bundle at '/workspace/scratch/52a24d242245/.tools/dotnet/sdk/8.0.425/trustedroots/codesignctl.pem'.
+  X.509 certificate chain validation will use the fallback certificate bundle at '/workspace/scratch/52a24d242245/.tools/dotnet/sdk/8.0.425/trustedroots/timestampctl.pem'.
+  Assets file has not changed. Skipping assets file writing. Path: /workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/Tests/obj/project.assets.json
+  Restored /workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/Tests/Tests.csproj (in 43 ms).
+  
+  NuGet Config files used:
+      /root/.nuget/NuGet/NuGet.Config
+  
+  Feeds used:
+      https://api.nuget.org/v3/index.json
+  All projects are up-to-date for restore.
+Done Building Project "/workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/Tests/Tests.csproj" (Restore target(s)).
+Project "/workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/Tests/Tests.csproj" on node 1 (Build target(s)).
+GenerateTargetFrameworkMonikerAttribute:
+Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+CoreGenerateAssemblyInfo:
+Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+_GenerateSourceLinkFile:
+  Source Link is empty, file 'obj/Release/net8.0/Tests.sourcelink.json' does not exist.
+CoreCompile:
+Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+_CreateAppHost:
+Skipping target "_CreateAppHost" because all output files are up-to-date with respect to the input files.

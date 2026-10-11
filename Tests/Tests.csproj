@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><DefineConstants>HEADLESS_TEST</DefineConstants></PropertyGroup>
+<ItemGroup>
+<Compile Include="../Shared/*.cs" />
+<Compile Include="../ClipShelf.Core/CoreStateStore.cs" />
+<Compile Include="../ClipShelf/ClipItem.cs" />
+<Compile Include="../ClipShelf/ClipEditing.cs" /><Compile Include="../ClipShelf/QuickPickerModel.cs" />
+<Compile Include="../ClipShelf/AppSettings.cs" />
+<Compile Include="../ClipShelf/SidebarItem.cs" />
+<Compile Include="../ClipShelf/BackupService.cs" />
+</ItemGroup>
+</Project>

@@ -1,0 +1,15 @@
+Managed Linux child-process access limitation during Python build orchestration; not a Windows product test.
+Running: /workspace/scratch/52a24d242245/.tools/dotnet/dotnet /workspace/scratch/52a24d242245/.tools/dotnet/sdk/8.0.425/MSBuild.dll
+Running: /workspace/scratch/52a24d242245/.tools/dotnet/dotnet /workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/Tests/bin/Release/net8.0/Tests.dll
+Running: /workspace/scratch/52a24d242245/.tools/dotnet/dotnet /workspace/scratch/52a24d242245/.tools/dotnet/sdk/8.0.425/MSBuild.dll
+Traceback (most recent call last):
+  File "/workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/BUILD_PORTABLE.py", line 88, in <module>
+    if __name__=='__main__': main()
+                             ^^^^^^
+  File "/workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/BUILD_PORTABLE.py", line 53, in main
+    run([dotnet_path,msbuild,root/project,'-restore','-target:Publish','-p:Configuration=Release',
+  File "/workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/BUILD_PORTABLE.py", line 46, in run
+    subprocess.run([str(x) for x in command], cwd=root, env=env, stdout=stream, stderr=subprocess.STDOUT,
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/workspace/scratch/52a24d242245/.tools/dotnet/dotnet', '/workspace/scratch/52a24d242245/.tools/dotnet/sdk/8.0.425/MSBuild.dll', '/workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/ClipShelf.Core/ClipShelf.Core.csproj', '-restore', '-target:Publish', '-p:Configuration=Release', '-p:RuntimeIdentifier=win-x64', '-p:SelfContained=true', '-p:EnableWindowsTargeting=true', '-p:PublishDir=/workspace/scratch/52a24d242245/work/ClipShelf-2.15.1/release/']' died with <Signals.SIGABRT: 6>.

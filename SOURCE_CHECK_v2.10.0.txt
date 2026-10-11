@@ -1,0 +1,50 @@
+﻿ClipShelf v2.10.0 SOURCE CHECK — Full Backup Export / Safe Merge Import
+
+Base: user-provided ClipShelf v2.9.0 source package.
+Validation level: static/source/package only in this environment; Windows .NET 8/WPF build and runtime are NOT claimed.
+
+INTENDED SOURCE CHANGES
+- ClipShelf/BackupService.cs (new)
+- ClipShelf/MainWindow.xaml (Backup menu button)
+- ClipShelf/MainWindow.xaml.cs (export/import UI + managed directory purge)
+- ClipShelf/HistoryStore.cs (checked atomic save path for import commit)
+- ClipShelf/ClipShelf.csproj (version 2.10.0)
+- ClipShelf.Core/ClipShelf.Core.csproj (version 2.10.0)
+- BUILD_EXE.ps1 (package label only)
+- README.txt / README_v2.10.0.txt / DEVELOPMENT_HISTORY.md
+
+STABLE CORE IMPLEMENTATION CHECK
+- ClipShelf.Core/BubbleForm.cs: UNCHANGED from v2.9.0 | SHA256 57aad174e6e73d23301a5c744985ec4458654edef3924dd91cce957de55c783e
+- ClipShelf.Core/CoreContext.cs: UNCHANGED from v2.9.0 | SHA256 b94c187832b76880b2c409298632112f026e1857151fbd3250ba886583c83043
+- ClipShelf.Core/CoreStateStore.cs: UNCHANGED from v2.9.0 | SHA256 cd89c3962b67fc8834579b42f899678d309d39524c098c737bd9e9cf1e72df62
+- ClipShelf.Core/CrashReporter.cs: UNCHANGED from v2.9.0 | SHA256 798640479ef9572106c7a7fcdde4dd2174e1469a0136eb67aa7b59665414fec2
+- ClipShelf.Core/EventNames.cs: UNCHANGED from v2.9.0 | SHA256 fc9b15474554867787a6d9c7322175961bf41b76799aa6d60424b3e0e748ae31
+- ClipShelf.Core/NativeMessageWindow.cs: UNCHANGED from v2.9.0 | SHA256 ebebe5fe8f59761f870c4f6b72cb0e50567950bac05465d80f7faf811cd515b8
+- ClipShelf.Core/Program.cs: UNCHANGED from v2.9.0 | SHA256 5af6c3ef1755adaa54251e6eabd81d39b8fa026c2a1fbe99478511b680e47a4b
+
+OCR IMPLEMENTATION CHECK
+- ocr/Capture.ps1: UNCHANGED from v2.9.0 | SHA256 9ea3f0befaaca277d605193c3bef6bd659282e7f9723b471301c2b6f7bd479cd
+- ocr/RegionSelector.cs: UNCHANGED from v2.9.0 | SHA256 5de5d52869b4f962b6d0f898692e4eabe14777f65ab3241a50181a1f7301e51c
+- ocr/Watchdog.cs: UNCHANGED from v2.9.0 | SHA256 a4388750255cd56257417c77ddc23fa8f9eace30fa86466060cd4ceda006ca3f
+
+- BUILD_EXE.cmd: UNCHANGED from v2.9.0
+
+STATIC CHECKS PERFORMED
+- MainWindow.xaml, SettingsDialog.xaml, MiniWindow.xaml and both csproj files parsed as XML.
+- XAML event-handler names resolve across ClipShelf C# partial-class source.
+- C# source passed structural brace scan.
+- No v2.9.0 source/runtime file was removed from the package.
+- Backup extraction uses safe archive-path normalization and root-bound destination checks.
+- Recursive folder export includes subdirectories/files and excludes the in-progress backup archive itself.
+- Import stages physical payloads under storage/imports before merge; duplicate IDs are skipped.
+- Import uses SaveNowChecked before reporting success and can discard staged payload on pre-commit failure.
+- Export path does not write to history.json or mutate live ClipShelf item state.
+- Current .cmd bootstrap remains ASCII, BOM-free, CRLF.
+
+WINDOWS TEST GATE
+1. Run BUILD_EXE.cmd and require BUILD SUCCESS.
+2. Start ClipShelf_READY\ClipShelf.exe and confirm existing v2.9 history is still present.
+3. Export a .clipshelfbackup containing at least text + image + file + a folder with nested subfolder/file.
+4. Prefer testing import on a copy/test data set first; verify current records remain and imported records are added.
+5. Verify imported nested folder/file payload opens/copied correctly.
+6. Re-export after import and confirm no startup/data regression.

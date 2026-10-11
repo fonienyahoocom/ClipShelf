@@ -1,0 +1,1282 @@
+--- 2.15.0/.ci/initial-baseline-sha256.json
++++ 2.15.1/.ci/initial-baseline-sha256.json
+@@ -0,0 +1,30 @@
++{
++  "source_version": "2.15.0",
++  "source_zip_sha256": "505ec65ff91e4ab7da42b16ca36d0d8ba91249227adaf3364d129c16ceb6286a",
++  "protected_files": [
++    {
++      "path": "ClipShelf/HistoryStore.cs",
++      "sha256": "fa73f3568ec6b5c6d51c5da2a54dec054683bbbbcdcbb2c61b8727045293e835"
++    },
++    {
++      "path": "ClipShelf/BackupService.cs",
++      "sha256": "2eb5968f3704d2a34868f6af876d9fd6d862cee9bfee7f40488ef4a711a013a4"
++    },
++    {
++      "path": "ClipShelf/ClipItem.cs",
++      "sha256": "a0c29c8eb1ccc33749bb9f9f90f843e196c2072e16cfa82f204ff1cdc2ae4202"
++    },
++    {
++      "path": "ClipShelf/ClipEditing.cs",
++      "sha256": "e0409997f64d37508567719da725c88f95bd7d167d3d0be6864aa1affe82ca08"
++    },
++    {
++      "path": "Shared/SafeState.cs",
++      "sha256": "7776cade660988f679d14afb29277d79e03ee6c23c1b7aa964058c64bf45d9fb"
++    },
++    {
++      "path": "Shared/AutoBackup.cs",
++      "sha256": "40c887b5b1a98c0bb7317a888a9c721637e5a68fd8dd35e12c1302b3d82a57f5"
++    }
++  ]
++}
+--- 2.15.0/.github/workflows/windows-build.yml
++++ 2.15.1/.github/workflows/windows-build.yml
+@@ -0,0 +1,89 @@
++name: ClipShelf Windows Build
++on:
++  push:
++    branches: [main]
++  pull_request:
++    branches: [main]
++permissions:
++  contents: read
++concurrency:
++  group: clipshelf-${{ github.event.pull_request.number || github.ref }}
++  cancel-in-progress: true
++jobs:
++  windows:
++    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
++    runs-on: windows-2022
++    timeout-minutes: 25
++    steps:
++      - name: Checkout exact source
++        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified 2026-10-11
++        with:
++          ref: ${{ github.event.pull_request.head.sha || github.sha }}
++          fetch-depth: 0
++          persist-credentials: false
++      - name: Checkout comparison baseline
++        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
++        with:
++          ref: ${{ github.event.pull_request.base.sha || github.event.before != '0000000000000000000000000000000000000000' && github.event.before || github.sha }}
++          path: .ci-baseline
++          persist-credentials: false
++      - name: Install .NET 8 SDK
++        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
++        with:
++          dotnet-version: 8.0.425
++      - name: Install Python
++        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
++        with:
++          python-version: '3.12'
++      - name: Install package inspection and NSIS
++        shell: pwsh
++        run: |
++          python -m pip install pefile==2024.8.26
++          if ($LASTEXITCODE -ne 0) { throw 'pefile install failed' }
++          choco install nsis --version=3.11 -y --no-progress
++          if ($LASTEXITCODE -notin 0,3010) { throw 'NSIS install failed' }
++      - name: Tests, publish, installer and byte verification
++        shell: pwsh
++        env:
++          DOTNET_CLI_TELEMETRY_OPTOUT: '1'
++          DOTNET_NOLOGO: '1'
++        run: |
++          $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
++          $sevenzip = Join-Path $env:ProgramFiles '7-Zip\7z.exe'
++          if (!(Test-Path $nsis) -or !(Test-Path $sevenzip)) { throw 'Required packaging tool missing' }
++          $baseline = "$env:GITHUB_WORKSPACE\.ci-baseline"
++          if (!(Test-Path "$baseline\ClipShelf\HistoryStore.cs")) {
++            python CI_BASELINE.py
++            if ($LASTEXITCODE -ne 0) { throw 'Initial baseline hash verification failed' }
++            $baseline = "$env:GITHUB_WORKSPACE\.ci-initial-baseline"
++          }
++          python BUILD_PORTABLE.py --baseline $baseline --output "$env:GITHUB_WORKSPACE\out" --dotnet (Get-Command dotnet).Source --makensis $nsis --sevenzip $sevenzip
++          if ($LASTEXITCODE -ne 0) { throw 'Build or verification failed' }
++          python CI_RELEASE.py
++          if ($LASTEXITCODE -ne 0) { throw 'Release report failed' }
++      - name: Upload checked release
++        if: success()
++        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
++        with:
++          name: clipshelf-release-${{ github.run_id }}-${{ github.run_attempt }}
++          path: |
++            out/ClipShelf-*-Source.zip
++            out/ClipShelf-*-Setup.exe
++            out/ClipShelf-*-BuildReceipt.json
++            out/ClipShelf-*-版本交付清單.json
++            out/ClipShelf-*-更新說明與測試結果.md
++            out/ClipShelf-*-使用說明.txt
++          if-no-files-found: error
++          retention-days: 7
++          compression-level: 0
++      - name: Upload validation logs even on failure
++        if: always()
++        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
++        with:
++          name: clipshelf-logs-${{ github.run_id }}-${{ github.run_attempt }}
++          path: |
++            validation/*.log
++            validation/package-checks.json
++            validation/commands.json
++          if-no-files-found: warn
++          retention-days: 7
+--- 2.15.0/.gitignore
++++ 2.15.1/.gitignore
+@@ -0,0 +1,11 @@
++**/bin/
++**/obj/
++**/__pycache__/
++release/
++out/
++ClipShelf_READY/
++.ci-baseline/
++.ci-initial-baseline/
++*.exe
++*.zip
++BUILD失敗_把這個傳給ChatGPT.txt
+--- 2.15.0/BUILD_EXE.cmd
++++ 2.15.1/BUILD_EXE.cmd
+@@ -7,7 +7,7 @@
+ cd /d "%SCRIPT_DIR%"
+ 
+ echo ================================================
+-echo ClipShelf v2.15.0 - BUILD HARNESS 3
++echo ClipShelf v2.15.1 - BUILD HARNESS 3
+ echo ================================================
+ echo.
+ 
+--- 2.15.0/BUILD_EXE.ps1
++++ 2.15.1/BUILD_EXE.ps1
+@@ -67,7 +67,7 @@
+ 
+ try {
+     Write-Log 'BUILD_EXE PowerShell harness started.'
+-    Write-Log 'ClipShelf package: v2.15.0 - Desktop Release - Build Harness 3'
++    Write-Log 'ClipShelf package: v2.15.1 - Desktop Release - Build Harness 3'
+     Write-Log "Original working directory: $OriginalWorkingDirectory"
+     Write-Log "Script directory: $ScriptDir"
+     Write-Log "PowerShell version: $($PSVersionTable.PSVersion)"
+--- 2.15.0/BUILD_PORTABLE.py
++++ 2.15.1/BUILD_PORTABLE.py
+@@ -0,0 +1,76 @@
++"""Build Windows artifacts on a Windows/Linux host, without Work or Library APIs.
++Requires Python 3.10+, .NET 8 SDK, NSIS 3.x (amd64 target), 7-Zip and pefile.
++Always requires a separate, verified pre-patch baseline for regression checks.
++"""
++import argparse, hashlib, json, os, platform, shutil, subprocess, sys, zipfile
++from pathlib import Path
++from datetime import datetime, timezone
++import xml.etree.ElementTree as ET
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--dotnet', default='dotnet')
++    parser.add_argument('--makensis', default='makensis')
++    parser.add_argument('--sevenzip', default='7z')
++    parser.add_argument('--nsisdir')
++    parser.add_argument('--baseline', type=Path, required=True)
++    parser.add_argument('--output', type=Path, required=True)
++    args = parser.parse_args()
++    root = Path(__file__).resolve().parent
++    baseline = args.baseline.resolve()
++    if baseline == root or not (baseline/'ClipShelf/HistoryStore.cs').is_file():
++        raise ValueError('Use a separate extracted official source as baseline.')
++    output = args.output.resolve(); output.mkdir(parents=True, exist_ok=True)
++    version = ET.parse(root/'ClipShelf/ClipShelf.csproj').findtext('.//Version')
++    core_version = ET.parse(root/'ClipShelf.Core/ClipShelf.Core.csproj').findtext('.//Version')
++    if version != core_version or ('VIProductVersion "'+version+'.0"') not in (root/'installer/ClipShelf.nsi').read_text():
++        raise ValueError('Core/UI/NSIS version mismatch: update all version resources before build.')
++    evidence = root/'validation'; evidence.mkdir(exist_ok=True)
++    payload = root/'release'
++    if payload.exists(): shutil.rmtree(payload)
++    payload.mkdir()
++    env = os.environ.copy()
++    if args.nsisdir: env['NSISDIR'] = str(Path(args.nsisdir).resolve())
++    commands = []
++    def run(command, log):
++        commands.append(command)
++        print('Running: '+str(command[0])+' '+str(command[1]), flush=True)
++        with (evidence/log).open('w', encoding='utf-8') as stream:
++            subprocess.run([str(x) for x in command], cwd=root, env=env, stdout=stream, stderr=subprocess.STDOUT, check=True)
++    run([args.dotnet,'run','--project',root/'Tests/Tests.csproj','-c','Release'], 'tests.log')
++    for project, target, log in [('ClipShelf.Core/ClipShelf.Core.csproj',payload,'publish-core.log'),('ClipShelf/ClipShelf.csproj',payload/'ui','publish-wpf.log')]:
++        run([args.dotnet,'publish',root/project,'-c','Release','-r','win-x64','--self-contained','true','-p:EnableWindowsTargeting=true','-o',target],log)
++    for name in ('README.txt','DEVELOPMENT_HISTORY.md','Diagnostics/Measure-Wake.ps1'):
++        file=root/name
++        if file.exists(): shutil.copy2(file,payload/file.name)
++    (payload/'BUILD_SUCCESS.log').write_text(f'ClipShelf {version}\nBuild host: {platform.system()} {platform.machine()}\nCore and WPF publish PASS; Windows native interaction UNVERIFIED\n',encoding='utf-8')
++    files=sorted(f for f in payload.rglob('*') if f.is_file())
++    lines=['# Generated from exact published payload.']
++    for f in files: lines.append('Delete "$INSTDIR\\'+str(f.relative_to(payload)).replace('/','\\').replace('$','$$')+'"')
++    for d in sorted((x for x in payload.rglob('*') if x.is_dir()),key=lambda x:len(str(x)),reverse=True):
++        lines.append('RMDir "$INSTDIR\\'+str(d.relative_to(payload)).replace('/','\\').replace('$','$$')+'"')
++    (root/'installer/uninstall-files.nsh').write_text('\n'.join(lines)+'\n',encoding='utf-8')
++    setup=output/f'ClipShelf-{version}-Setup.exe'
++    if setup.exists(): raise FileExistsError('Refusing to overwrite previous installer: '+str(setup))
++    prefix='/' if platform.system()=='Windows' else '-'
++    run([args.makensis,prefix+'DPAYLOAD_DIR='+str(payload),prefix+'DOUTPUT_FILE='+str(setup),root/'installer/ClipShelf.nsi'],'installer-build.log')
++    extracted=output/f'installer-payload-{version}'
++    if extracted.exists(): raise FileExistsError(str(extracted))
++    run([args.sevenzip,'x',setup,'-o'+str(extracted),'-y'],'installer-extraction.log')
++    run([sys.executable,root/'validation/verify_release.py','--source',root,'--baseline',baseline,'--setup',setup,'--extracted',extracted],'package-checks.log')
++    (evidence/'commands.json').write_text(json.dumps(commands,ensure_ascii=False,indent=2,default=str)+'\n',encoding='utf-8')
++    source=output/f'ClipShelf-{version}-Source.zip'
++    if source.exists(): raise FileExistsError(str(source))
++    with zipfile.ZipFile(source,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as archive:
++        for file in sorted(root.rglob('*')):
++            if not file.is_file() or any(x in ('bin','obj','release','out','ClipShelf_READY','__pycache__','.git','.ci-baseline','.ci-initial-baseline','.tools') for x in file.relative_to(root).parts): continue
++            if file.suffix.lower() in ('.zip','.exe'): continue
++            archive.write(file,'ClipShelf-'+version+'/'+file.relative_to(root).as_posix())
++    with zipfile.ZipFile(source) as archive:
++        if archive.testzip() is not None: raise ValueError('Source ZIP CRC failure')
++    entries=[{'file_name':f.name,'size_bytes':f.stat().st_size,'sha256':hashlib.sha256(f.read_bytes()).hexdigest()} for f in (source,setup)]
++    receipt={'version':version,'created_utc':datetime.now(timezone.utc).isoformat(),'build_host':platform.system(),'build':'PASS','package':'PASS','native_windows_interaction':'UNVERIFIED','files':entries}
++    (output/f'ClipShelf-{version}-BuildReceipt.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
++    print(json.dumps(receipt,ensure_ascii=False,indent=2),flush=True)
++
++if __name__=='__main__': main()
+--- 2.15.0/BUILD_SETUP.ps1
++++ 2.15.1/BUILD_SETUP.ps1
+@@ -5,7 +5,7 @@
+ $Nsis = Get-Command makensis.exe -ErrorAction SilentlyContinue
+ if ($Nsis) { $Compiler = $Nsis.Source } else { $Compiler = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe' }
+ if (-not (Test-Path $Compiler)) { throw 'Install NSIS 3.x first.' }
+-$Output = Join-Path $Root 'ClipShelf-2.15.0-Setup.exe'
++$Output = Join-Path $Root 'ClipShelf-2.15.1-Setup.exe'
+ $Lines = @('# Generated from the exact published payload.')
+ Get-ChildItem -LiteralPath $Payload -Recurse -File | ForEach-Object {
+   $Relative = $_.FullName.Substring($Payload.Length + 1).Replace('$', '$$')
+--- 2.15.0/CHAT_BUILD_HANDOFF.md
++++ 2.15.1/CHAT_BUILD_HANDOFF.md
+@@ -0,0 +1,40 @@
++# ClipShelf｜一般 Chat 遠端建置入口
++
++2026-10-11 本版快照：`PIPELINE_SOURCE_PREPARED / REPOSITORY_CREATION_BLOCKED / CHAT_BUILD_READY=NO`。
++此快照不是日後 current authority。每次先讀 Library owner `/Codex|工作區治理/ClipShelf/00_READ_FIRST.md`、`01_CURRENT_STATE.md`、`02_ASSET_INDEX.md`，再查正式 Drive manifest 和 Source，核對實際大小／SHA-256，禁止回退過時工程。
++
++## 精確入口與權威
++
++- 已核 GitHub 帳號：`fonienyahoocom`。已核可存取私有 repo：`fonienyahoocom/ai-library`；它不是 ClipShelf repo，本輪未修改。
++- ClipShelf repo 實際位置：**尚未建立／未取得**。預定私有位置 `https://github.com/fonienyahoocom/ClipShelf`，不能把這個預定 URL 當成已存在。
++- 當前 Source／Setup 的正式位置由 Library CURRENT 和 Asset Index 指向；Drive 資料夾 `https://drive.google.com/drive/folders/1VZk-qoa7lbTtmY2pBWDqo4tBYs7qHwTq`。
++- GitHub 僅工程鏡像／建置入口；沒有取消 Library owner 或 Drive 交付責任。本轮 USER 明確授權 ClipShelf 專屬私有 GitHub 工程，不復活已退役的全 Library Git migration／Tier 2 mirror。
++- Repo 建立後將完整 Source 根目錄檔案作 repo root；工程為 `ClipShelf.Core/`、`ClipShelf/`、`Shared/`、`Tests/`；Workflow 為 `.github/workflows/windows-build.yml`。初始化時帶入 `.ci/initial-baseline-sha256.json`，沒有前個工程 commit 時先比對已驗證的 2.15.0 六個資料安全檔案；一般 PR 改用真實 base commit。
++
++## 一次性缺口
++
++本聊天室 GitHub Connector 實讀 profile、repo list、installed repo search 成功，有分支、檔案、tree/commit/ref、PR、Workflow runs/jobs/logs/artifact 工具，沒有 create-repository 操作；本機也沒有 GitHub CLI／登入 token。不能藉此宣稱 repo 已建立或 Actions 已執行。
++需要建立**私有** ClipShelf repo（可初始化 README）並授予現有 GitHub Connector 存取。不要將原始碼公開、不索取或保存使用者 token。若採 GitHub 網頁代建，需先取得本次 Browser fallback 允許；只缺一次性入口，不需使用者手動編譯。
++
++## Repo 可用後的一般 Chat 操作路徑
++
++1. 用 Connector `get_profile`、`list_repositories`／`search_installed_repositories_v2` 核對 repo 身分、private、push 權限；確認 owner CURRENT 同版。首次載入完整最新 Source 到 root。文字可用 create/update file，二進位 ICO 必須用 create_blob(base64) → create_tree → create_commit → update_ref；保留精確 bytes。主分支更新要求 expected head SHA，不 force 覆蓋他人變更。禁止上傳 `%LOCALAPPDATA%` 使用者歷史或憑證。
++2. 取得 repo main 的確切 head SHA；從該 SHA `create_branch`，例如 `clipshelf/quick-picker-fix-YYYYMMDD`。用 `fetch_file`／`fetch_blob` 讀取真實 source；在這條分支修改、加測試、更新版本資源及說明。不要從舊聊天室重建產品。
++3. 以原 blob SHA 的 update_file 或 tree/commit 提交，開向 main 的 PR。Workflow 用同 repo PR 事件自動觸發；不需 Workflow Dispatch。push main 亦觸發。避免逐檔 main commit 產生大量重複 build；先做單一整合 commit，再 PR。
++4. 用 `fetch_commit_workflow_runs` 找該 PR head SHA 的 run（此工具只回 PR runs）。用 `fetch_workflow_run_jobs` 確认 Windows job，`fetch_workflow_job_steps` 和 `fetch_workflow_job_logs` 查每一步與失敗原因。run 未完畢／失敗／取消皆不得當成功。首次 main import 的 run 用 repo Actions URL／GitHub fetch collection 查詢；正式 E2E 固定用 PR，避免 Connector 的 PR-only 查詢限制。
++5. Workflow 在 `windows-2022` 固定 SDK 8.0.425，安裝 NSIS 3.11／pefile，執行真實 Tests（Windows 也要跑 IPC）、Core/WPF self-contained publish、NSIS、7-Zip 解包及版本／逐檔 SHA-256，最後產 Source ZIP、Setup、BuildReceipt、說明及版本清單。工具缺失或 package 校驗失敗立即停止。純建置不是互動 GUI 驗收。
++6. run success 後 `fetch_workflow_run_artifacts` 列出未過期 release artifact ID，再 `download_workflow_artifact` 取真正 ZIP bytes；檢查 run head SHA、名稱、版本、大小、archive digest、manifest 內每個檔案 SHA-256。重新計算 Setup 和 Source bytes，不能只信 log PASS 或 artifact 名稱。必須能拿到實際檔案才算取得安裝版。
++7. 經 Source 差異與真實測試驗證後，以候選狀態交付原 Drive，重新下載核對 SHA-256。依當時 Library root／owner／staging／overwrite 規則更新 Source／Release 指向、Asset Index、CURRENT_STATE，payload first，control last，重新 discovery＋read-back。Actions artifact 不是正式持久交付；舊版不能刪除或覆蓋。
++
++## 首次端到端驗收
++
++Repo 建立後，先讀回初始化 Source 與正式 ZIP 每一檔 bytes 比對；建立測試分支，僅在 README 加一行「受控 E2E 建置驗證」，提交并开 PR；等待 Windows job 完成，核對 Tests、publish、NSIS、package logs。下載 release artifact，驗實際 Source／Setup version／hash，再按正式交付規則保存並讀回。記錄 repository、base/head SHA、PR/run/job/artifact ID、實際檔案大小與hash、交付讀回證據。驗證流程可由一般 Chat Connector 完成、不要求本機 Windows。只有全鏈通過，CURRENT_STATE 才能標 `CHAT_BUILD_READY`。
++本版尚未執行這次 E2E，不能將 Workflow YAML 或 Linux cross-build 當作遠端 Windows PASS。
++
++## 配額、期限及故障恢復
++
++Workflow 使用標準 Windows runner、25 分鐘 timeout、同 PR 最新 run concurrency、artifact 保留7天，沒有新付費服務或雲端憑證。Actions 的私有 repo 配額／預算／餘額尚未查證；GitHub 官方說明 https://docs.github.com/en/billing/concepts/product-billing/github-actions 。不可假設無限／免費或擅自調高預算。repo actions disabled、權限403、額度耗盡、缺 runner/toolchain、artifact 過期或Connector無法下載要分別回報；不能說 CHAT_BUILD_READY。
++
++Actions 壞掉時先取失敗 logs，在同 PR 修補工具／程式並重新 commit 觸發；不偷偷降版。Artifact 過期時取相同已驗證 Source commit 重新建置並新取hash，不沿用舊安裝檔hash。GitHub source 比 canonical 新時它是候選，先核證 lineage；比 canonical 舊時先更新工程鏡像，不把旧 branch 覆蓋正式Source。Connector 暫缺時仍保留原 Drive／Library 最新正式交付。
++
++原生 Windows GUI 尚需獨立驗證：浮動圖示、Shift/Ctrl 多選、Delete／恢復、點外收合／保持開啟、內部選單、目標貼上焦點、中文IME、DPI、多螢幕、原地升級和待機／喚醒資源。Actions 的 console tests 或成功 NSIS 打包不能證明上述 UI 全通過。
+--- 2.15.0/CHAT_UPDATE.md
++++ 2.15.1/CHAT_UPDATE.md
+@@ -0,0 +1,23 @@
++# ClipShelf 可攜式更新
++
++ClipShelf 執行檔本身不依賴 ChatGPT、Work、Library 或 Drive。Source 現在提供獨立建置工具 `BUILD_PORTABLE.py`，可在具有執行工具的一般 Chat、Linux 工程容器或 Windows 電腦使用同一工程完成 Source、Windows x64 Setup 和驗證記錄。這不是遠端自動更新服務，沒有新增網路常駐或外部資料庫。
++
++需要：Python 3.10+、.NET SDK 8、NSIS 3.x（amd64 Unicode stub）、7-Zip、`pip install pefile`。原生 Windows 也保留原 `BUILD_EXE.cmd` → `BUILD_SETUP.cmd` 路線。
++
++可攜式指令：
++
++```sh
++python BUILD_PORTABLE.py --baseline /path/to/verified-previous-source --output /path/to/new-deliverables --dotnet /path/to/dotnet --makensis /path/to/makensis --sevenzip /path/to/7z
++```
++
++Linux 使用自解壓 NSIS 時可加 `--nsisdir /path/to/usr/share/nsis`。Windows 路徑含空格請加雙引號。工具路徑在 PATH 時可省略三個工具參數。輸出目錄不得包含既有同版 Setup 或 Source；工具拒絕覆寫。NSIS 必須包含 `amd64-unicode` stub。
++
++工程流程為：先保存未修改正式 Source 作 baseline，再在另一份 Source 修補，更新 Core／UI csproj 三個版本屬性、NSIS 版本、About／Crash／CSV／README／build scripts，執行上述指令。工具檢查各版本一致，執行真實回歸測試、兩個 self-contained publish、NSIS、解包逐檔 SHA-256、來源回歸與 ZIP CRC，再輸出 Source／Setup／BuildReceipt。失敗即停止，不把部分 build 當正式安裝版。
++
++新功能需要同步新增真正的測試，並更新 `validation/verify_release.py` 的驗收條件；不要為了通過而降低資料保護條件。歷史驗證檔案留在 `validation/baseline-*`，本次測試另外記錄。
++
++一般 Chat 的能力由該聊天環境決定。若只有文字回覆、没有檔案執行工具，就不能直接修改 ZIP 或編譯 Windows 安裝包。若有 Python 檔案執行但沒有 SDK／NSIS／網路，能產出 source patch，不能聲稱 Setup 完成。工具齊全時本流程可直接製作成品，不要求 Work 專用 API；本版在受管 Linux 主機以逐條正式命令完成 cross-build；本主機 Python 子程序的 /proc 存取阻擋一鍵流程，沒有將該失敗當作 PASS。一般 Chat 的實際執行尚未獨立驗證。
++
++Source 是程式維護介面；聊天本身沒有 ClipShelf 自動升級權限。Drive／Library 保存則使用該聊天可用的連接器，遵守現行正式 owner 和覆寫規則；沒有連接器时下載交付仍可用，但不得聲稱已同步持久保存。本輪另依 USER 明確追加授權準備 GitHub Actions Windows pipeline，詳 CHAT_BUILD_HANDOFF.md。專屬私有 Repository 尚未建立，不能聲稱遠端能力已可用。
++
++Installer 更新前从系統匣完全退出舊版，保留 `%LOCALAPPDATA%\ClipShelf`。回退用前版正式 Setup；資料若需回復，先備份，再從完整管理的 Import Preview 合併匯入，不直接覆蓋使用者歷史檔案。
+--- 2.15.0/CI_BASELINE.py
++++ 2.15.1/CI_BASELINE.py
+@@ -0,0 +1,18 @@
++"""First source import: validate protected files against verified delivery hashes.
++Not used when a preceding source commit exists; ordinary PRs use actual base SHA.
++"""
++from pathlib import Path
++import json,hashlib,shutil
++root=Path(__file__).resolve().parent
++record=json.loads((root/'.ci/initial-baseline-sha256.json').read_text(encoding='utf-8'))
++target=root/'.ci-initial-baseline'
++if target.exists(): raise FileExistsError(str(target))
++for entry in record['protected_files']:
++    relative=Path(entry['path'])
++    if relative.is_absolute() or '..' in relative.parts: raise ValueError('Unsafe baseline path')
++    source=root/relative
++    if hashlib.sha256(source.read_bytes()).hexdigest()!=entry['sha256']:
++        raise ValueError('Initial import differs from verified data safety baseline: '+str(relative))
++for entry in record['protected_files']:
++    source=root/entry['path']; dest=target/entry['path'];dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,dest)
++print('Initial protected baseline verified against official source SHA-256 record; this is not an earlier GitHub source commit.')
+--- 2.15.0/CI_RELEASE.py
++++ 2.15.1/CI_RELEASE.py
+@@ -0,0 +1,21 @@
++"""Complete the Actions artifact with provenance and actual-byte hashes."""
++from pathlib import Path
++import json, hashlib, os, shutil
++root=Path(__file__).resolve().parent
++out=root/'out'
++receipts=list(out.glob('ClipShelf-*-BuildReceipt.json'))
++if len(receipts)!=1: raise RuntimeError('Expected exactly one completed build receipt')
++receipt=json.loads(receipts[0].read_text(encoding='utf-8'))
++version=receipt['version']
++tests=(root/'validation/tests.log').read_text(encoding='utf-8')
++package=json.loads((root/'validation/package-checks.json').read_text(encoding='utf-8'))
++provenance={key:os.environ.get(key) for key in ('GITHUB_REPOSITORY','GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REF','RUNNER_OS')}
++shutil.copy2(root/'README.txt',out/f'ClipShelf-{version}-使用說明.txt')
++notes=out/f'ClipShelf-{version}-更新說明與測試結果.md'
++notes.write_text(f'# ClipShelf {version} Windows Runner build\n\nBuild/Package PASS; native GUI UNVERIFIED.\n\n'+json.dumps(provenance,ensure_ascii=False,indent=2)+'\n\n'+tests+f'\nOffline package checks: {package["checks_passed"]}\n',encoding='utf-8')
++files=[]
++for f in sorted(out.glob('ClipShelf-*')):
++    if f.is_file() and f.suffix in ('.zip','.exe','.json','.txt','.md'):
++        files.append({'file_name':f.name,'size_bytes':f.stat().st_size,'sha256':hashlib.sha256(f.read_bytes()).hexdigest()})
++manifest={'version':version,'build':'PASS','package':'PASS','native_gui':'UNVERIFIED','provenance':provenance,'files':files,'package_checks':package['checks_passed'],'artifact_retention_days':7,'canonical_delivery':'NOT_YET_PROMOTED','manifest_self_hash':'Recorded outside this manifest to avoid recursion'}
++(out/f'ClipShelf-{version}-版本交付清單.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+--- 2.15.0/ClipShelf/AppSettings.cs
++++ 2.15.1/ClipShelf/AppSettings.cs
+@@ -56,6 +56,8 @@
+     public double MiniTop { get; set; }
+     public bool HasMiniPlacement { get; set; }
+ 
++    public bool FloatingIconEnabled { get; set; } = true;
++    public bool PickerCloseOnDeactivate { get; set; } = true;
+     public double PickerWidth { get; set; } = 440;
+     public double PickerHeight { get; set; } = 570;
+     public double PickerLeft { get; set; }
+@@ -66,6 +68,8 @@
+ 
+     public AppSettings Clone() => new()
+     {
++        FloatingIconEnabled = FloatingIconEnabled,
++        PickerCloseOnDeactivate = PickerCloseOnDeactivate,
+         PickerWidth = PickerWidth, PickerHeight = PickerHeight,
+         PickerLeft = PickerLeft, PickerTop = PickerTop, HasPickerPlacement = HasPickerPlacement,
+         PickerHotkeyModifiers = PickerHotkeyModifiers, PickerHotkeyKey = PickerHotkeyKey,
+--- 2.15.0/ClipShelf/ClipShelf.csproj
++++ 2.15.1/ClipShelf/ClipShelf.csproj
+@@ -1,9 +1,9 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <OutputType>WinExe</OutputType>
+-    <Version>2.15.0</Version>
+-    <FileVersion>2.15.0.0</FileVersion>
+-    <AssemblyVersion>2.15.0.0</AssemblyVersion>
++    <Version>2.15.1</Version>
++    <FileVersion>2.15.1.0</FileVersion>
++    <AssemblyVersion>2.15.1.0</AssemblyVersion>
+     <TargetFramework>net8.0-windows</TargetFramework>
+     <UseWPF>true</UseWPF>
+     <UseWindowsForms>true</UseWindowsForms>
+--- 2.15.0/ClipShelf/PickerIntegration.cs
++++ 2.15.1/ClipShelf/PickerIntegration.cs
+@@ -24,6 +24,14 @@
+         if (request.Command == "hotkey-status") { _hotkeyStatus = request.Message ?? ""; return; }
+         if (request.Command == "bubble-placement")
+         { _settings.MiniLeft = request.Left; _settings.MiniTop = request.Top; _settings.HasMiniPlacement = true; QueueSave(); _store.SaveNowChecked(); _coreBridge.NotifyStateChanged(); return; }
++        if (request.Command == "bubble-visible")
++        {
++            var before = _settings.FloatingIconEnabled;
++            _settings.FloatingIconEnabled = request.Message == "true";
++            try { QueueSave(); _store.SaveNowChecked(); }
++            catch { _settings.FloatingIconEnabled = before; throw; }
++            _coreBridge.NotifyStateChanged(); return;
++        }
+         if (request.Command == "hide") { CloseForTrueHide(); return; }
+         if (request.Command == "quick" || request.Command == "toggle-quick")
+         { OpenPicker(request.Command == "toggle-quick", request.Target, request.TargetPid, request.Started); return; }
+@@ -35,7 +43,7 @@
+     }
+     private void EnsurePicker()
+     {
+-        _picker ??= new QuickPickerWindow(() => _allItems, () => _settings, QueueSave, ActivateFromCore, CopyForPickerAsync);
++        _picker ??= new QuickPickerWindow(() => _allItems, () => _settings, QueueSave, ActivateFromCore, CopyForPickerAsync, DeleteForPicker, () => _folderPaths);
+     }
+     private void OpenPicker(bool toggle = false, long target = 0, int pid = 0, long started = 0)
+     {
+@@ -54,23 +62,35 @@
+         // Switching windows preserves the manager's draft and selection exactly.
+         _ignoreDeactivationUntil = DateTime.UtcNow.AddMilliseconds(400);
+         Hide(); _shortcutHidden = true;
++        _coreBridge.ShowBubble(); // Quick picker coexists with the no-activate floating icon.
+         _picker.OpenPicker(target, pid, started);
+     }
+     private void QuickPicker_Click(object sender, RoutedEventArgs e) => OpenPicker();
+-    private async Task CopyForPickerAsync(ClipItem item, bool plainText)
++    private void DeleteForPicker(System.Collections.Generic.IReadOnlyList<ClipItem> items)
+     {
+-        if (!_allItems.Contains(item)) throw new InvalidOperationException("紀錄已移除；請重新開啟快捷選取。");
++        if (items.Count == 0 || items.Any(x => !_allItems.Contains(x) || x.IsDeleted || x.IsPendingPurge))
++            throw new InvalidOperationException("紀錄已變更，請重新選取。");
++        if (items.Any(x => x.IsEditingText))
++            throw new InvalidOperationException("選取內容正在完整管理中編輯，請先完成編輯。");
++        // Reuse Safe Delete, without refreshing the hidden manager or erasing drafts.
++        SoftDeleteItems(items, refresh: false, showUndo: false);
++        QueueSave();
++    }
++    private async Task CopyForPickerAsync(System.Collections.Generic.IReadOnlyList<ClipItem> items, bool plainText)
++    {
++        if (items.Count == 0 || items.Any(item => !_allItems.Contains(item) || item.IsDeleted || item.IsPendingPurge)) throw new InvalidOperationException("紀錄已移除；請重新開啟快捷選取。");
+         for (var attempt = 0; ; attempt++)
+         {
+             try
+             {
+-                PickerClipboard.Write(item, plainText);
++                if (items.Count == 1) PickerClipboard.Write(items[0], plainText);
++                else Clipboard.SetText(PickerSelection.CombineText(items));
+                 _lastInternalClipboardSequence = PickerClipboard.GetClipboardSequenceNumber();
+                 break;
+             }
+             catch (System.Runtime.InteropServices.COMException) when (attempt < 3) { await Task.Delay(25); }
+         }
+-        item.UseCount++; item.LastUsedAt = DateTime.Now; item.HistoryVisible = true;
++        foreach (var item in items) { item.UseCount++; item.LastUsedAt = DateTime.Now; item.HistoryVisible = true; }
+         // No manager refresh; no mutation of picker order. Save failure is handled by
+         // the existing store error path and never triggers an empty-state fallback.
+         QueueSave();
+--- 2.15.0/ClipShelf/ProductFeatures.cs
++++ 2.15.1/ClipShelf/ProductFeatures.cs
+@@ -92,7 +92,7 @@
+             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClipShelf", "auto-backups");
+             Directory.CreateDirectory(dir); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dir) { UseShellExecute = true });
+         });
+-        Add("關於 ClipShelf 2.15.0", () => MessageBox.Show(this, "ClipShelf 2.15.0\n本機剪貼庫 · 搜尋 · 整理 · 文字組合\n\nCtrl+~ 開啟 / 隱藏\nCtrl+F 搜尋，方向鍵選擇，Enter 貼上\n卡片原地編輯：Enter 換行，Ctrl+Enter 儲存，Esc 取消\n標題改名：Enter 儲存，Esc 取消\n文字詳細設定：Enter 儲存，Shift+Enter 換行\n模板欄位：{{欄位名稱}}\n\n自動備份：每小時檢查，保留最近 14 份。\n資料位置：%LOCALAPPDATA%\\ClipShelf", "關於 ClipShelf"));
++        Add("關於 ClipShelf 2.15.1", () => MessageBox.Show(this, "ClipShelf 2.15.1\n本機剪貼庫 · 搜尋 · 整理 · 文字組合\n\nCtrl+~ 開啟 / 隱藏\nCtrl+F 搜尋，方向鍵選擇，Enter 貼上\n卡片原地編輯：Enter 換行，Ctrl+Enter 儲存，Esc 取消\n標題改名：Enter 儲存，Esc 取消\n文字詳細設定：Enter 儲存，Shift+Enter 換行\n模板欄位：{{欄位名稱}}\n\n自動備份：每小時檢查，保留最近 14 份。\n資料位置：%LOCALAPPDATA%\\ClipShelf", "關於 ClipShelf"));
+         ShowProductMenu(menu, (FrameworkElement)sender);
+     }
+     private void ShowProductMenu(ContextMenu menu, FrameworkElement owner)
+--- 2.15.0/ClipShelf/QuickPickerModel.cs
++++ 2.15.1/ClipShelf/QuickPickerModel.cs
+@@ -26,7 +26,8 @@
+             .Take(1000).ToList();
+     }
+     private static bool Contains(string? text, string word) => (text ?? "").Contains(word, StringComparison.OrdinalIgnoreCase);
+-    private static bool Eligible(ClipItem item) => item.HistoryVisible && !item.IsDeleted && !item.IsPendingPurge;
++    public PickerScope Scope { get; set; } = new("History", "", "歷史");
++    private bool Eligible(ClipItem item) => !item.IsDeleted && !item.IsPendingPurge && Scope.Matches(item);
+ }
+ 
+ internal sealed class PickerSession
+@@ -40,3 +41,58 @@
+     public bool TryBeginPaste() { if (!Visible || Busy) return false; Busy = true; return true; }
+     public void EndPaste() => Busy = false;
+ }
++
++internal sealed record PickerScope(string Kind, string Path, string Label)
++{
++    public string Key => Kind + ":" + Path;
++    public bool Matches(ClipItem item)
++    {
++        if (Kind == "History") return item.HistoryVisible;
++        if (Kind == "Favorite") return item.Favorite;
++        if (Kind == "Temporary") return item.IsTemporary;
++        if (Kind is "AI" or "Quick") {
++            var root = Kind == "AI" ? "AI 用語" : "快速用語";
++            return item.Category == root || item.Category.StartsWith(root + "/", StringComparison.Ordinal);
++        }
++        var relative = SidebarItem.GetRelativePath(Path);
++        return SidebarItem.GetScope(Path) switch {
++            "Favorite" => item.Favorite && SidebarItem.NormalizePath(item.FavoriteFolder) == relative,
++            "Temporary" => item.IsTemporary && SidebarItem.NormalizePath(item.TemporaryFolder) == relative,
++            "AI" => item.Category == "AI 用語/" + relative,
++            "Quick" => item.Category == "快速用語/" + relative,
++            _ => item.Category == Path
++        };
++    }
++    public static IReadOnlyList<PickerScope> Build(IEnumerable<string> folders)
++    {
++        var result = new List<PickerScope> {
++            new("History", "", "歷史"), new("Favorite", "", "收藏"),
++            new("Temporary", "", "暫存"), new("AI", "", "AI 用語"), new("Quick", "", "快速用語")
++        };
++        foreach (var path in folders.Select(SidebarItem.NormalizePath).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)) {
++            var prefix = SidebarItem.GetScope(path) switch {
++                "Favorite" => "收藏 / ", "Temporary" => "暫存 / ", "AI" => "AI 用語 / ", "Quick" => "快速用語 / ", _ => ""
++            };
++            result.Add(new("Folder", path, prefix + SidebarItem.GetRelativePath(path)));
++        }
++        return result;
++    }
++}
++
++internal static class PickerSelection
++{
++    public static string CombineText(IReadOnlyList<ClipItem> items)
++    {
++        if (items.Count == 0 || items.Any(x => x.IsDeleted || x.IsPendingPurge))
++            throw new InvalidOperationException("選取內容已移除，請重新選取。");
++        if (items.Any(x => x.Kind != "Text"))
++            throw new InvalidOperationException("多選複製／貼上只支援文字；圖片或檔案請單選。");
++        return string.Join(Environment.NewLine, items.Select(x => x.Text));
++    }
++}
++
++internal static class PickerDismissal
++{
++    public static bool ShouldDismiss(bool visible, bool active, bool busy, bool ownedInteraction, bool closeOnDeactivate)
++        => visible && !active && !busy && !ownedInteraction && closeOnDeactivate;
++}
+--- 2.15.0/ClipShelf/QuickPickerWindow.xaml
++++ 2.15.1/ClipShelf/QuickPickerWindow.xaml
+@@ -27,27 +27,36 @@
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+   <DockPanel Background="#0F766E" Margin="0" LastChildFill="True">
+    <Button DockPanel.Dock="Right" Content="完整管理 ↗" Click="Manage_Click" Margin="8" Padding="8,4" Background="#DFF2EF"/>
+-   <TextBlock Text="▤ 快捷選取" Foreground="White" FontSize="16" Margin="12" VerticalAlignment="Center"/>
++   <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,4">
++    <ComboBox x:Name="ScopeBox" Width="115" MaxDropDownHeight="350" DisplayMemberPath="Label" SelectionChanged="Scope_Changed" ToolTip="選擇快捷清單來源；預設歷史"/>
++    <CheckBox x:Name="KeepOpen" Content="保持開啟" Foreground="White" Margin="8,0,0,0" VerticalAlignment="Center" Click="KeepOpen_Click" ToolTip="勾選：點外不收合；Enter 貼上與 Esc 仍會收合"/>
++   </StackPanel>
+   </DockPanel>
+   <TextBox Grid.Row="1" x:Name="Search" Margin="10,9" Padding="8,6" FontSize="14" TextChanged="Search_Changed" ToolTip="直接輸入搜尋；↑↓選取、Enter貼上"/>
+   <ListBox Grid.Row="2" x:Name="Rows" Margin="6,0" BorderThickness="0" Background="Transparent"
+-   SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
++   SelectionMode="Extended" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+    ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+-   MouseDoubleClick="Rows_DoubleClick">
++   SelectionChanged="Rows_SelectionChanged" MouseDoubleClick="Rows_DoubleClick" PreviewMouseRightButtonDown="Rows_RightClick">
++   <ListBox.ContextMenu><ContextMenu><MenuItem Header="移到最近刪除（可恢復）" Click="DeleteSelected_Click"/></ContextMenu></ListBox.ContextMenu>
+    <ListBox.ItemTemplate><DataTemplate>
+     <Grid Height="36" ToolTip="{Binding Preview}">
+-     <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
++     <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions>
+      <Grid><TextBlock Text="{Binding Glyph}" FontSize="19" VerticalAlignment="Center"/><Image Source="{Binding Thumbnail}" Width="28" Height="28" Stretch="Uniform"/></Grid>
+      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+       <TextBlock Text="{Binding Summary}" TextTrimming="CharacterEllipsis" FontSize="13.5"/>
+       <TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis" FontSize="10.5" Foreground="#708090"/>
+      </StackPanel>
++     <Button Grid.Column="2" Content="×" ToolTip="將這筆移到最近刪除（可恢復）" PreviewMouseLeftButtonDown="Delete_MouseDown" Click="DeleteRow_Click" Padding="2" BorderThickness="0" Background="Transparent" Foreground="#708090"/>
+     </Grid>
+    </DataTemplate></ListBox.ItemTemplate>
+   </ListBox>
+   <StackPanel Grid.Row="3" Margin="12,8,12,12">
++   <DockPanel x:Name="BatchActions" Visibility="Collapsed" Margin="0,0,0,5">
++    <Button DockPanel.Dock="Right" Content="刪除選取" Click="DeleteSelected_Click" Padding="6,2"/>
++    <TextBlock x:Name="SelectionCount" Foreground="#0F766E" VerticalAlignment="Center"/>
++   </DockPanel>
+    <TextBlock x:Name="Status" Foreground="#0F766E" TextWrapping="Wrap" FontSize="12"/>
+-   <TextBlock Text="↑↓ 選取 · Enter 貼上 · Esc 收合 · Ctrl+C 複製 · F3 預覽" FontSize="10.5" Foreground="#708090" Margin="0,4,0,0"/>
++   <TextBlock Text="Shift/Ctrl＋點選 多選 · Delete 刪除 · Enter 貼上 · Esc 收合 · F3 預覽" FontSize="10.5" Foreground="#708090" Margin="0,4,0,0"/>
+   </StackPanel>
+  </Grid>
+ </Window>
+--- 2.15.0/ClipShelf/QuickPickerWindow.xaml.cs
++++ 2.15.1/ClipShelf/QuickPickerWindow.xaml.cs
+@@ -24,7 +24,11 @@
+     private readonly Func<AppSettings> _settings;
+     private readonly Action _save;
+     private readonly Action _manage;
+-    private readonly Func<ClipItem, bool, Task> _copy;
++    private readonly Func<IReadOnlyList<ClipItem>, bool, Task> _copy;
++    private readonly Action<IReadOnlyList<ClipItem>> _delete;
++    private readonly Func<IEnumerable<string>> _folders;
++    private int _ownedInteraction;
++    private bool _refreshingScopes;
+     private readonly DispatcherTimer _searchTimer;
+     private bool _shuttingDown;
+     private bool _restoringPlacement;
+@@ -33,9 +37,17 @@
+     internal bool IsBusy => _session.Busy;
+ 
+     internal QuickPickerWindow(Func<IEnumerable<ClipItem>> items, Func<AppSettings> settings,
+-        Action save, Action manage, Func<ClipItem, bool, Task> copy)
+-    {
+-        InitializeComponent(); _items = items; _settings = settings; _save = save; _manage = manage; _copy = copy;
++        Action save, Action manage, Func<IReadOnlyList<ClipItem>, bool, Task> copy,
++        Action<IReadOnlyList<ClipItem>> delete, Func<IEnumerable<string>> folders)
++    {
++        InitializeComponent(); _items = items; _settings = settings; _save = save; _manage = manage; _copy = copy; _delete = delete; _folders = folders;
++        KeepOpen.IsChecked = !settings().PickerCloseOnDeactivate;
++        Deactivated += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
++        {
++            // Do not steal focus back from an outside click; owned preview/menu/dropdown are internal interactions.
++            if (PickerDismissal.ShouldDismiss(IsVisible, IsActive, IsBusy, _ownedInteraction > 0 || ScopeBox.IsDropDownOpen || Rows.ContextMenu.IsOpen, _settings().PickerCloseOnDeactivate))
++                HidePicker(restoreTarget: false);
++        }));
+         Rows.ItemsSource = _rows;
+         _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
+         _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); ApplySearch(); };
+@@ -56,7 +68,7 @@
+     {
+         if (IsBusy) return;
+         _session.Open(target, pid); _opening = true;
+-        _model.Open(_items()); Search.Clear(); ApplySearch(); _opening = false;
++        RefreshScopes(); _model.Open(_items()); Search.Clear(); ApplySearch(); _opening = false;
+         Status.Text = Rows.Items.Count == 0 ? "目前沒有最近紀錄" : "選取內容後按 Enter 貼上";
+         Show(); Activate(); Search.Focus();
+         if (started > 0) Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
+@@ -65,17 +77,17 @@
+             PickerDiagnostics.Record(elapsed);
+         }));
+     }
+-    internal void HidePicker()
++    internal void HidePicker(bool restoreTarget = true)
+     {
+         if (IsBusy) return;
+         _searchTimer.Stop(); PersistPlacement(); _session.Hide(); Hide();
+-        PickerClipboard.RestoreTarget(new IntPtr(_session.Target), _session.TargetPid);
++        if (restoreTarget) PickerClipboard.RestoreTarget(new IntPtr(_session.Target), _session.TargetPid);
+     }
+     internal void ShutdownPicker() { _shuttingDown = true; _searchTimer.Stop(); Close(); }
+     internal void Synchronize()
+     {
+         if (!IsVisible || IsBusy) return;
+-        _model.Synchronize(_items()); ApplySearch();
++        RefreshScopes(); _model.Synchronize(_items()); ApplySearch();
+     }
+     private void Search_Changed(object sender, TextChangedEventArgs e)
+     {
+@@ -84,7 +96,8 @@
+     }
+     private void ApplySearch()
+     {
+-        var id = (Rows.SelectedItem as PickerRow)?.Item.Id;
++        var selectedIds = Rows.SelectedItems.Cast<PickerRow>().Select(r => r.Item.Id).ToHashSet();
++        var previousIndex = Rows.SelectedIndex;
+         var found = _model.Search(Search.Text);
+         var ids = found.Select(i => i.Id).ToHashSet();
+         for (var n = _rows.Count - 1; n >= 0; n--) if (!ids.Contains(_rows[n].Item.Id)) _rows.RemoveAt(n);
+@@ -101,8 +114,9 @@
+                 else existing.Refresh();
+             }
+         }
+-        Rows.SelectedItem = Rows.Items.Cast<PickerRow>().FirstOrDefault(r => r.Item.Id == id);
+-        if (Rows.SelectedIndex < 0 && Rows.Items.Count > 0) Rows.SelectedIndex = 0;
++        Rows.SelectedItems.Clear();
++        foreach (var row in _rows.Where(r => selectedIds.Contains(r.Item.Id))) Rows.SelectedItems.Add(row);
++        if (Rows.SelectedIndex < 0 && Rows.Items.Count > 0) Rows.SelectedIndex = Math.Clamp(previousIndex, 0, Rows.Items.Count - 1);
+         Status.Text = found.Count == 0 ? "沒有符合的紀錄" : $"{found.Count} 筆" + (found.Count == 1000 ? "（最多顯示 1000 筆，輸入搜尋縮小範圍）" : "");
+     }
+     private async void Picker_KeyDown(object sender, KeyEventArgs e)
+@@ -110,6 +124,13 @@
+         var key = e.Key == Key.System ? e.SystemKey : e.Key;
+         if (_composing || key == Key.ImeProcessed) return;
+         if (IsBusy) { e.Handled = true; return; }
++        // Controls own their activation keys; selecting a folder or activating
++        // Delete/Manage must never be interpreted as a clipboard paste.
++        if (ScopeBox.IsDropDownOpen || (ScopeBox.IsKeyboardFocusWithin && key is Key.Up or Key.Down or Key.Enter) ||
++            (key == Key.Enter && IsButtonSource(Keyboard.FocusedElement as DependencyObject))) return;
++        if (key == Key.A && Keyboard.Modifiers == ModifierKeys.Control && Rows.IsKeyboardFocusWithin)
++        { e.Handled = true; Rows.SelectAll(); return; }
++        if (key == Key.Delete && !Search.IsKeyboardFocusWithin) { e.Handled = true; if (!e.IsRepeat) DeleteSelection(); return; }
+         if (key == Key.Escape) { e.Handled = true; HidePicker(); return; }
+         if (key == Key.Up || key == Key.Down || key == Key.Enter)
+         {
+@@ -124,7 +145,7 @@
+         {
+             e.Handled = true;
+             if (Rows.SelectedItem is PickerRow row && _session.TryBeginPaste())
+-                try { await _copy(row.Item, false); Status.Text = "已複製；沒有送出貼上"; }
++                try { await _copy(SelectedItems(), false); Status.Text = "已複製；沒有送出貼上"; }
+                 catch (Exception ex) { Status.Text = ex.Message; }
+                 finally { _session.EndPaste(); }
+         }
+@@ -134,18 +155,21 @@
+             var preview = new Window { Title = "內容預覽", Width = 520, Height = 420, Owner = this, ShowInTaskbar = false,
+                 Content = new TextBox { Text = selected.Item.DisplayText, IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
+                     VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(12) } };
+-            preview.ShowDialog(); Search.Focus();
++            _ownedInteraction++;
++            try { preview.ShowDialog(); } finally { _ownedInteraction--; }
++            Search.Focus();
+         }
+     }
+     private void Picker_TextInput(object sender, TextCompositionEventArgs e)
+     {
+-        if (Search.IsKeyboardFocusWithin || string.IsNullOrEmpty(e.Text) || IsBusy) return;
++        if (Search.IsKeyboardFocusWithin || ScopeBox.IsKeyboardFocusWithin || IsButtonSource(e.OriginalSource as DependencyObject) || string.IsNullOrEmpty(e.Text) || IsBusy) return;
+         Search.Focus(); Search.SelectedText = e.Text; Search.CaretIndex = Search.Text.Length; e.Handled = true;
+     }
+     private async void Rows_DoubleClick(object sender, MouseButtonEventArgs e)
+     {
+         // Empty space / scrollbar double-click must never paste the selected row.
+-        if (ItemsControl.ContainerFromElement(Rows, e.OriginalSource as DependencyObject) is ListBoxItem)
++        if (Keyboard.Modifiers == ModifierKeys.None && !IsButtonSource(e.OriginalSource as DependencyObject) &&
++            ItemsControl.ContainerFromElement(Rows, e.OriginalSource as DependencyObject) is ListBoxItem)
+         { e.Handled = true; await Commit(false); }
+     }
+     private async Task Commit(bool plainText)
+@@ -155,7 +179,7 @@
+         {
+             if (!PickerClipboard.ValidTarget(new IntPtr(_session.Target), _session.TargetPid))
+             { Status.Text = "原視窗已關閉或沒有可用目標；Ctrl+C 可只複製。"; return; }
+-            await _copy(row.Item, plainText);
++            await _copy(SelectedItems(), plainText);
+             Hide();
+             var failure = await PickerClipboard.SendPasteAsync(new IntPtr(_session.Target), _session.TargetPid);
+             if (failure != null) { Show(); Activate(); Search.Focus(); Status.Text = failure; }
+@@ -164,6 +188,56 @@
+         catch (Exception ex) { if (!IsVisible) Show(); Status.Text = ex.Message; }
+         finally { _session.EndPaste(); }
+     }
++    private IReadOnlyList<ClipItem> SelectedItems() => _rows.Where(r => Rows.SelectedItems.Contains(r)).Select(r => r.Item).ToList();
++    private static bool IsButtonSource(DependencyObject? source)
++    {
++        while (source != null) {
++            if (source is System.Windows.Controls.Primitives.ButtonBase) return true;
++            source = source is System.Windows.Media.Visual || source is System.Windows.Media.Media3D.Visual3D
++                ? System.Windows.Media.VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
++        }
++        return false;
++    }
++    private void Rows_SelectionChanged(object sender, SelectionChangedEventArgs e)
++    {
++        if (BatchActions == null) return;
++        var count = Rows.SelectedItems.Count;
++        BatchActions.Visibility = count > 1 ? Visibility.Visible : Visibility.Collapsed;
++        SelectionCount.Text = $"已選取 {count} 筆";
++    }
++    private void DeleteSelection() => DeleteItems(SelectedItems());
++    private void Delete_MouseDown(object sender, MouseButtonEventArgs e) { if (e.ClickCount > 1 || IsBusy) e.Handled = true; }
++    private void Rows_RightClick(object sender, MouseButtonEventArgs e)
++    {
++        if (IsBusy) { e.Handled = true; return; }
++        if (ItemsControl.ContainerFromElement(Rows, e.OriginalSource as DependencyObject) is ListBoxItem container && !container.IsSelected)
++            Rows.SelectedItem = container.DataContext;
++    }
++    private void DeleteSelected_Click(object sender, RoutedEventArgs e) { e.Handled = true; DeleteSelection(); }
++    private void DeleteRow_Click(object sender, RoutedEventArgs e)
++    { e.Handled = true; if ((sender as FrameworkElement)?.DataContext is PickerRow row) DeleteItems(new[] { row.Item }); }
++    private void DeleteItems(IReadOnlyList<ClipItem> items)
++    {
++        if (items.Count == 0 || !_session.TryBeginPaste()) return;
++        try { _delete(items); _model.Synchronize(_items()); ApplySearch(); Status.Text = $"已將 {items.Count} 筆移到最近刪除，可從完整管理恢復。"; }
++        catch (Exception ex) { Status.Text = ex.Message; }
++        finally { _session.EndPaste(); }
++    }
++    private void RefreshScopes()
++    {
++        var scopes = PickerScope.Build(_folders());
++        var current = scopes.FirstOrDefault(s => s.Key == _model.Scope.Key) ?? scopes[0];
++        _refreshingScopes = true;
++        ScopeBox.ItemsSource = scopes; ScopeBox.SelectedItem = current; _model.Scope = current;
++        _refreshingScopes = false;
++    }
++    private void Scope_Changed(object sender, SelectionChangedEventArgs e)
++    {
++        if (_refreshingScopes || _opening || ScopeBox.SelectedItem is not PickerScope scope || _session.Busy) return;
++        _model.Scope = scope; _model.Open(_items()); Rows.SelectedItems.Clear(); ApplySearch();
++    }
++    private void KeepOpen_Click(object sender, RoutedEventArgs e)
++    { _settings().PickerCloseOnDeactivate = KeepOpen.IsChecked != true; _save(); }
+     private void Manage_Click(object sender, RoutedEventArgs e) { if (IsBusy) return; HidePicker(); _manage(); }
+     private void RestorePlacement()
+     {
+@@ -233,7 +307,7 @@
+             Directory.CreateDirectory(dir); var path = Path.Combine(dir, "picker-wake.csv");
+             if (File.Exists(path) && new FileInfo(path).Length > 256000) File.Move(path, path + ".previous", true);
+             using var p = Process.GetCurrentProcess();
+-            File.AppendAllText(path, $"{DateTime.UtcNow:O},2.15.0,{Environment.ProcessId},{elapsed.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.WorkingSet64},{p.PrivateMemorySize64},{p.TotalProcessorTime.TotalMilliseconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n");
++            File.AppendAllText(path, $"{DateTime.UtcNow:O},2.15.1,{Environment.ProcessId},{elapsed.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.WorkingSet64},{p.PrivateMemorySize64},{p.TotalProcessorTime.TotalMilliseconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n");
+         }
+         catch { }
+     }
+--- 2.15.0/ClipShelf/SettingsDialog.xaml
++++ 2.15.1/ClipShelf/SettingsDialog.xaml
+@@ -45,6 +45,7 @@
+                     </StackPanel>
+                 </Border>
+ 
++                <CheckBox x:Name="FloatingIconCheck" Content="顯示桌面浮動圖示（獨立於管理／快捷視窗）" Margin="0,18,0,0" FontSize="14"/>
+                 <TextBlock Text="最近刪除" FontSize="20" FontWeight="SemiBold" Foreground="#172033" Margin="0,20,0,0"/>
+                 <TextBlock Text="一般刪除先進入「最近刪除」，到期後才會真正清除。" Margin="0,4,0,12" Foreground="#64748B" FontSize="12"/>
+ 
+--- 2.15.0/ClipShelf/SettingsDialog.xaml.cs
++++ 2.15.1/ClipShelf/SettingsDialog.xaml.cs
+@@ -20,6 +20,7 @@
+         PickerHotkey.SelectedIndex = settings.PickerHotkeyKey == 86 ? 1 : settings.PickerHotkeyKey == 81 ? 2 : 0;
+         _baseSettings = settings.Clone();
+         Result = settings.Clone();
++        FloatingIconCheck.IsChecked = settings.FloatingIconEnabled;
+         CaptureTextCheck.IsChecked = settings.CaptureText;
+         CaptureImagesCheck.IsChecked = settings.CaptureImages;
+         CaptureFilesCheck.IsChecked = settings.CaptureFiles;
+@@ -101,6 +102,7 @@
+         Result = _baseSettings.Clone();
+         Result.PickerHotkeyKey = int.Parse(((ComboBoxItem)PickerHotkey.SelectedItem).Tag.ToString()!);
+         Result.PickerHotkeyModifiers = Result.PickerHotkeyKey == 192 ? 2 : 3;
++        Result.FloatingIconEnabled = FloatingIconCheck.IsChecked == true;
+         Result.CaptureText = CaptureTextCheck.IsChecked == true;
+         Result.CaptureImages = CaptureImagesCheck.IsChecked == true;
+         Result.CaptureFiles = CaptureFilesCheck.IsChecked == true;
+--- 2.15.0/ClipShelf/SidebarItem.cs
++++ 2.15.1/ClipShelf/SidebarItem.cs
+@@ -1,5 +1,7 @@
+ using System;
++#if !HEADLESS_TEST
+ using System.Windows;
++#endif
+ 
+ namespace ClipShelf;
+ 
+@@ -29,7 +31,9 @@
+     public bool IsAiFolder => IsCustomFolder && Scope == "AI";
+     public bool IsQuickFolder => IsCustomFolder && Scope == "Quick";
+     public bool IsClassificationFolder => IsCustomFolder && Scope is "Custom" or "AI" or "Quick";
++#if !HEADLESS_TEST
+     public Thickness Indent => new(Math.Max(0, Depth) * 14, 0, 0, 0);
++#endif
+     public string DisplayName => Name;
+     public string ExpansionGlyph => HasChildren ? (IsExpanded ? "▾" : "▸") : "";
+ 
+--- 2.15.0/ClipShelf.Core/ClipShelf.Core.csproj
++++ 2.15.1/ClipShelf.Core/ClipShelf.Core.csproj
+@@ -1,9 +1,9 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <OutputType>WinExe</OutputType>
+-    <Version>2.15.0</Version>
+-    <FileVersion>2.15.0.0</FileVersion>
+-    <AssemblyVersion>2.15.0.0</AssemblyVersion>
++    <Version>2.15.1</Version>
++    <FileVersion>2.15.1.0</FileVersion>
++    <AssemblyVersion>2.15.1.0</AssemblyVersion>
+     <TargetFramework>net8.0-windows</TargetFramework>
+     <UseWindowsForms>true</UseWindowsForms>
+     <Nullable>enable</Nullable>
+--- 2.15.0/ClipShelf.Core/CoreContext.cs
++++ 2.15.1/ClipShelf.Core/CoreContext.cs
+@@ -54,6 +54,7 @@
+     private bool _shuttingDown;
+     private DateTime _lastSaveError = DateTime.MinValue;
+     private bool _bubblePendingAfterUiClose;
++    private readonly ToolStripMenuItem _bubbleVisibleItem;
+ 
+     public CoreContext(bool background = false)
+     {
+@@ -103,7 +104,7 @@
+         _bubble = new BubbleForm();
+         _bubble.OpenRequested += OpenQuick;
+         _bubble.ManageRequested += OpenUi;
+-        _bubble.HideRequested += () => _bubble.Hide();
++        _bubble.HideRequested += () => SetBubbleEnabled(false);
+         _bubble.ExitRequested += Shutdown;
+         _bubble.ModeChangeRequested += SetSwitchMode;
+         _bubble.PositionCommitted += (left, top) => {
+@@ -128,8 +129,8 @@
+         _pauseItem = new ToolStripMenuItem();
+         _pauseItem.Click += (_, _) => TogglePause();
+ 
+-        var bubble = new ToolStripMenuItem("顯示桌面浮動圖示");
+-        bubble.Click += (_, _) => ShowBubble();
++        var bubble = _bubbleVisibleItem = new ToolStripMenuItem("顯示桌面浮動圖示");
++        bubble.Click += (_, _) => SetBubbleEnabled(!_store.FloatingIconEnabled);
+ 
+         var hide = new ToolStripMenuItem("真正隱藏（Ctrl+~）");
+         hide.Click += (_, _) => TrueHide();
+@@ -191,6 +192,8 @@
+             _normalModeItem.Checked = !nonInterference;
+             _nonInterferenceModeItem.Checked = nonInterference;
+             _bubble.SetNonInterferenceMode(nonInterference);
++        _bubbleVisibleItem.Checked = _store.FloatingIconEnabled;
++        ApplyBubbleVisibility();
+             if (nonInterference) _uiApplyNonInterferenceModeEvent.Set();
+             else _uiApplyNormalModeEvent.Set();
+             return;
+@@ -206,7 +209,7 @@
+         }
+         else
+         {
+-            _bubble.Hide();
++            ApplyBubbleVisibility();
+             OpenUi();
+         }
+     }
+@@ -246,7 +249,7 @@
+         GetWindowThreadProcessId(target, out pid);
+         var request = new UiRequest(command, target.ToInt64(), (int)pid, started);
+         _bubblePendingAfterUiClose = false;
+-        if (command != "resident") _bubble.Hide();
++        ApplyBubbleVisibility(); // Independent preference; never tied to either window.
+         if (IsUiRunning()) { _ = SendRequest(request); return; }
+         if (_uiStarting) { if (command != "resident") _ = SendRequest(request); return; }
+         var path = Path.Combine(AppContext.BaseDirectory, "ui", "ClipShelf.UI.exe");
+@@ -334,9 +337,20 @@
+         ShowBubbleNow();
+     }
+ 
++    private void SetBubbleEnabled(bool enabled)
++    {
++        if (_shuttingDown) return;
++        if (IsUiRunning()) { _ = SendRequest(new UiRequest("bubble-visible", Message: enabled ? "true" : "false")); return; }
++        _store.Reload(); _store.SetFloatingIconEnabled(enabled); UpdateTrayUi();
++    }
++    private void ApplyBubbleVisibility()
++    {
++        if (_shuttingDown) return;
++        if (_store.FloatingIconEnabled) ShowBubbleNow(); else _bubble.Hide();
++    }
+     private void ShowBubbleNow()
+     {
+-        if (_shuttingDown) return;
++        if (_shuttingDown || !_store.FloatingIconEnabled || _bubble.Visible) return;
+         var placement = _store.GetBubblePlacement();
+         _bubble.ShowAtSavedOrDefault(placement.Has, placement.Left, placement.Top);
+     }
+@@ -344,7 +358,7 @@
+     private void TrueHide()
+     {
+         _bubblePendingAfterUiClose = false;
+-        _bubble.Hide();
++        SetBubbleEnabled(false);
+         if (IsUiRunning()) _ = SendRequest(new UiRequest("hide"));
+     }
+ 
+@@ -373,6 +387,8 @@
+         _normalModeItem.Checked = !nonInterference;
+         _nonInterferenceModeItem.Checked = nonInterference;
+         _bubble.SetNonInterferenceMode(nonInterference);
++        _bubbleVisibleItem.Checked = _store.FloatingIconEnabled;
++        ApplyBubbleVisibility();
+     }
+ 
+     private readonly System.Threading.Timer _backupTimer = new(_ => { try { ClipShelfShared.AutoBackup.Run(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClipShelf")); } catch { } }, null, 15000, 60000);
+--- 2.15.0/ClipShelf.Core/CoreStateStore.cs
++++ 2.15.1/ClipShelf.Core/CoreStateStore.cs
+@@ -72,6 +72,10 @@
+     {
+         get { lock (_sync) return GetBool(Settings, "CaptureFiles", true); }
+     }
++
++    public bool FloatingIconEnabled { get { lock (_sync) return GetBool(Settings, "FloatingIconEnabled", true); } }
++    public void SetFloatingIconEnabled(bool value)
++    { lock (_sync) { Settings["FloatingIconEnabled"] = value; SaveLocked(); } }
+ 
+     public bool SwitchNonInterferenceMode
+     {
+--- 2.15.0/ClipShelf.Core/CrashReporter.cs
++++ 2.15.1/ClipShelf.Core/CrashReporter.cs
+@@ -76,7 +76,7 @@
+         var sb = new StringBuilder();
+         sb.AppendLine("CLIPSHELF RUNTIME CRASH - 把這個檔案傳給 ChatGPT");
+         sb.AppendLine("====================================================");
+-        sb.AppendLine("Version: v2.15.0");
++        sb.AppendLine("Version: v2.15.1");
+         sb.AppendLine("Component: ClipShelf.Core");
+         sb.AppendLine("Source: " + source);
+         sb.AppendLine("Startup stage: " + _stage);
+--- 2.15.0/DEVELOPMENT_HISTORY.md
++++ 2.15.1/DEVELOPMENT_HISTORY.md
+@@ -800,3 +800,8 @@
+ - 修正：補上 `NormalizeLeafName(string?)` helper；採 Unicode Form C + invariant upper-case，讓 Windows 檔名比較 fingerprint 維持 case-insensitive 且 deterministic。
+ - 本次只修 compile defect；匯入預掃描、去重、OCR、Stable Core 行為均不改。
+ - 依 Experience Extraction Protocol：這是單一遺漏 helper 的局部 compile defect，記 changelog，不升格為 Case。
++
++## 2.15.1｜2026-10-11
++基準為正式 Drive 2.15.0 Source，實際 SHA-256 505ec65ff91e4ab7da42b16ca36d0d8ba91249227adaf3364d129c16ceb6286a。
++修補 quick-mode 浮動圖示、原生 Shift/Ctrl 多選、Safe Delete、folder scope、點外收合／保持開啟。新增無 Work 依賴可攜式完整建置路線。
++Windows 原生互動與資源／喚醒數字未測，不能由 cross-build 推論通過。
+--- 2.15.0/Diagnostics/Measure-Wake.ps1
++++ 2.15.1/Diagnostics/Measure-Wake.ps1
+@@ -61,7 +61,7 @@
+ })
+ $Warm = @($Rows | Where-Object Phase -eq 'warm-repeat' | Sort-Object WakeMs)
+ $P95 = if ($Warm.Count) { $Warm[[Math]::Ceiling(.95*$Warm.Count)-1].WakeMs } else { $null }
+-$Report = [ordered]@{Version='2.15.0';StartedByProbe=$StartedByProbe;Scope='Core hotkey timestamp to WPF ContextIdle, includes IPC, not first-pixel paint';WarmP95Ms=$P95;Target250Ms=$(if($null -ne $P95){$P95 -lt 250}else{$null});StableUiPid=(@($Rows.UiPid | Select-Object -Unique).Count -eq 1);Idle=$Idle;Wakes=$Rows;NativePasteImeDpi='NOT_TESTED_BY_THIS_SCRIPT'}
++$Report = [ordered]@{Version='2.15.1';StartedByProbe=$StartedByProbe;Scope='Core hotkey timestamp to WPF ContextIdle, includes IPC, not first-pixel paint';WarmP95Ms=$P95;Target250Ms=$(if($null -ne $P95){$P95 -lt 250}else{$null});StableUiPid=(@($Rows.UiPid | Select-Object -Unique).Count -eq 1);Idle=$Idle;Wakes=$Rows;NativePasteImeDpi='NOT_TESTED_BY_THIS_SCRIPT'}
+ $Path = Join-Path $Dir ('wake-report-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.json')
+ $Report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $Path -Encoding UTF8
+ Write-Host "Report: $Path"
+--- 2.15.0/README.txt
++++ 2.15.1/README.txt
+@@ -1,7 +1,7 @@
+-ClipShelf 2.15.0 — 雙模式剪貼簿 Windows x64 候選交付版
++ClipShelf 2.15.1 — 雙模式剪貼簿 Windows x64 候選交付版
+ 
+ 安裝與更新
+-Windows 10/11 64 位元。執行 ClipShelf-2.15.0-Setup.exe，不需另外安裝 .NET。
++Windows 10/11 64 位元。執行 ClipShelf-2.15.1-Setup.exe，不需另外安裝 .NET。
+ 更新前先從右下角系統匣「離開 ClipShelf」退出舊版，再安裝；只關閉視窗不等於退出。
+ 可直接原地升級，不必先解除安裝。建議升級前先在舊版做一次完整備份。
+ 程式：%LOCALAPPDATA%\Programs\ClipShelf；個人資料：%LOCALAPPDATA%\ClipShelf。
+@@ -14,7 +14,7 @@
+ ↑／↓ 選取；Enter 貼上並收合；Esc 只收合；Ctrl+C 只複製，不送出貼上。
+ Shift+Enter 對文字送出純文字貼上。ClipShelf 現有文字歷史本來就只保存純文字，兩者結果相同。
+ 單擊只選取；雙擊列才貼上；F3 開啟全文預覽；圖片有縮圖、檔案有類型摘要。
+-一次最多顯示 1000 個搜尋結果；搜尋仍涵蓋全部有效最近紀錄。清單採虛擬化，非建立整庫卡片。
++一次最多顯示 1000 個搜尋結果；搜尋仍涵蓋目前來源的全部有效紀錄。清單採虛擬化，非建立整庫卡片。
+ 視窗開啟期間保留排序；新擷取紀錄加在尾端，重新開啟時再按最近使用排序。
+ 開啟前的外部視窗會作為貼上目標；內容寫入剪貼簿後恢復其焦點，再送出 Ctrl+V。
+ 請先放開快捷鍵／Shift。目標已關閉、焦點被 Windows 拒絕或權限不一致時，顯示原因；可 Ctrl+C 後手動貼上。
+@@ -45,7 +45,7 @@
+ Safe Delete／復原／永久刪除及匯入 merge 語義保留。OCR 已移除，不重新加入。
+ 
+ 驗證狀態
+-Windows x64 自含執行環境建置及 NSIS 封裝已完成；64 項模型／資料自動化檢查通過。
++Windows x64 自含執行環境建置及 NSIS 封裝已完成；82 項模型／資料自動化檢查通過。
+ 4 項實際 IPC 自動化測試被 Linux host 的 socket 權限阻擋，尚未通過實際傳輸驗證。
+ Windows 原生安裝／升級、Edge／Notepad++／Obsidian 貼上、IME、DPI、多螢幕、浮動選單點外關閉仍待實機確認。
+ 常駐 CPU、記憶體、1／10／30 分鐘喚醒延遲尚未測量；不能宣稱已達暖機 P95 <250ms。
+@@ -55,4 +55,17 @@
+ 
+ 再次建置
+ 開發電腦需 .NET 8 SDK 與 NSIS 3.x；執行 BUILD_EXE.cmd，再 BUILD_SETUP.cmd。
+-Source 包保留完整歷史工程文件；validation\baseline-2.14.2 為舊版證據，不可當成 2.15.0 測試結果。
++Source 包保留完整歷史工程文件；validation\baseline-2.14.2 為舊版證據，不可當成 2.15.1 測試結果。
++
++2.15.1 快捷模式補丁
++- 快捷視窗開啟／收合時保留桌面浮動圖示。
++- Shift＋點選連續多選，Ctrl＋點選個別多選；列右側 × 刪除一筆，右鍵或 Delete（清單焦點）刪除選取。全部移至最近刪除，可恢復。
++- 多選文字 Enter／Ctrl+C 依清單順序以換行合併；圖片／檔案須單選。
++- 頂部來源選單預設歷史，可選收藏、暫存、AI 用語、快速用語與既有資料夾。搜尋限制在目前來源。來源選擇保留於本次程序，不改管理介面篩選。
++- 預設點視窗外收合；勾「保持開啟」後點外不收合。設定保存；Esc、Enter 貼上依舊收合。
++- Source 附 BUILD_PORTABLE.py 與 CHAT_UPDATE.md。建置不綁 Work，但聊天須有執行／檔案／網路與建置工具；工具缺席時不能直接製作 Setup。
++- Source 的 validation/baseline-2.15.0 僅前版歷史證據。
++
++浮動圖示由系統匣「顯示桌面浮動圖示」或完整管理設定獨立控制；兩種視窗開啟不自動隱藏／開啟已禁用圖示。
++清單焦點 Ctrl+A 全選目前呈現項目；搜尋框 Ctrl+A 維持文字全選。多選時 footer 才出現批次刪除入口。
++GitHub Windows Workflow 隨 Source 交付，尚未安裝到 Repo、尚未完成遠端端到端驗證；CHAT_BUILD_READY = NO。
+--- 2.15.0/README_v2.15.1.txt
++++ 2.15.1/README_v2.15.1.txt
+@@ -0,0 +1,71 @@
++ClipShelf 2.15.1 — 雙模式剪貼簿 Windows x64 候選交付版
++
++安裝與更新
++Windows 10/11 64 位元。執行 ClipShelf-2.15.1-Setup.exe，不需另外安裝 .NET。
++更新前先從右下角系統匣「離開 ClipShelf」退出舊版，再安裝；只關閉視窗不等於退出。
++可直接原地升級，不必先解除安裝。建議升級前先在舊版做一次完整備份。
++程式：%LOCALAPPDATA%\Programs\ClipShelf；個人資料：%LOCALAPPDATA%\ClipShelf。
++安裝與解除安裝不清除個人資料。此包未簽章，Windows 可能顯示發行者未知。
++
++快捷選取模式
++Ctrl+~（Ctrl 加反引號／波浪鍵，不必按 Shift）開啟／收合獨立的小視窗。
++預設約 440 × 570，約十筆紧湊摘要；拖動標題列移動、邊框調整大小，記住位置與尺寸。
++直接輸入搜尋；空白分隔關鍵字，所有關鍵字皆需符合。搜尋文字、標題、備註、來源及檔名。
++↑／↓ 選取；Enter 貼上並收合；Esc 只收合；Ctrl+C 只複製，不送出貼上。
++Shift+Enter 對文字送出純文字貼上。ClipShelf 現有文字歷史本來就只保存純文字，兩者結果相同。
++單擊只選取；雙擊列才貼上；F3 開啟全文預覽；圖片有縮圖、檔案有類型摘要。
++一次最多顯示 1000 個搜尋結果；搜尋仍涵蓋目前來源的全部有效紀錄。清單採虛擬化，非建立整庫卡片。
++視窗開啟期間保留排序；新擷取紀錄加在尾端，重新開啟時再按最近使用排序。
++開啟前的外部視窗會作為貼上目標；內容寫入剪貼簿後恢復其焦點，再送出 Ctrl+V。
++請先放開快捷鍵／Shift。目標已關閉、焦點被 Windows 拒絕或權限不一致時，顯示原因；可 Ctrl+C 後手動貼上。
++Windows 接收鍵盤輸入不代表每個應用程式必定接受貼上；編輯位置及目標程式行為需實機確認。
++
++完整管理模式
++快捷視窗右上「完整管理」；系統匣與桌面浮動圖示右鍵也有「開啟完整管理」。
++完整管理左上「快捷選取」立即切换到小視窗；浮動圖示左鍵預設開啟快捷選取。
++管理模式原有 A 標準／B 緊湊卡片密度切換仍獨立存在，不是兩種工作模式的切換。
++保留歷史、收藏、資料夾、分類、搜尋、多選、編輯文字、標題、局部複製及原有備份／匯入。
++正文鉛筆進入原地編輯：Enter 換行、Ctrl+Enter 儲存、Esc 取消。
++標題鉛筆：Enter 儲存、Esc 取消；清空名稱回到自動摘要。
++切到快捷視窗不重設管理視窗選取、捲動、A/B 檢視或編輯草稿。
++「視窗切換模式」仍控制工作列／Alt+Tab／不干擾行為，與雙模式用途分開。
++
++快捷鍵衝突
++若 Ditto 或其他程式佔用 Ctrl+~，系統匣會提示註冊失敗。
++右鍵系統匣 → 完整管理 → 設定，可改用 Ctrl+Alt+V 或 Ctrl+Alt+Q；同樣檢查註冊結果。
++不註冊 Ctrl+Shift+F8，也不自動搶奪其他程式的快捷鍵。
++
++常駐與資料保護
++Core 與 WPF 仍為兩個程序；WPF 初始化後隱藏常駐，不再於 45 秒／300 秒退出。
++快捷視窗在第一次使用時初始化，後續重用；長時間隱藏不應重新冷啟動 WPF。
++隱藏時略過重複附件全文掃描，無新增滑鼠輪詢或全域低階滑鼠 Hook。
++真正退出會先檢查儲存及草稿；保存失敗時取消退出，不強殺程序。
++沿用既有 fail-closed 載入：無法確定 history.json 狀態時停止載入，不能當成空白覆寫。
++內部複製使用剪貼簿序號識別，避免自家寫入再成為重複歷史。
++Safe Delete／復原／永久刪除及匯入 merge 語義保留。OCR 已移除，不重新加入。
++
++驗證狀態
++Windows x64 自含執行環境建置及 NSIS 封裝已完成；82 項模型／資料自動化檢查通過。
++4 項實際 IPC 自動化測試被 Linux host 的 socket 權限阻擋，尚未通過實際傳輸驗證。
++Windows 原生安裝／升級、Edge／Notepad++／Obsidian 貼上、IME、DPI、多螢幕、浮動選單點外關閉仍待實機確認。
++常駐 CPU、記憶體、1／10／30 分鐘喚醒延遲尚未測量；不能宣稱已達暖機 P95 <250ms。
++程式將 Core 熱鍵請求到 WPF ContextIdle 的耗時記錄於 %LOCALAPPDATA%\ClipShelf\diagnostics\picker-wake.csv。
++原始碼包 Diagnostics\Measure-Wake.ps1 可在 Windows 執行重複熱鍵、1／10／30 分鐘隱藏及資源採樣；本輪未執行。
++完整測試邊界與回退方法見更新說明及版本交付清單。
++
++再次建置
++開發電腦需 .NET 8 SDK 與 NSIS 3.x；執行 BUILD_EXE.cmd，再 BUILD_SETUP.cmd。
++Source 包保留完整歷史工程文件；validation\baseline-2.14.2 為舊版證據，不可當成 2.15.1 測試結果。
++
++2.15.1 快捷模式補丁
++- 快捷視窗開啟／收合時保留桌面浮動圖示。
++- Shift＋點選連續多選，Ctrl＋點選個別多選；列右側 × 刪除一筆，右鍵或 Delete（清單焦點）刪除選取。全部移至最近刪除，可恢復。
++- 多選文字 Enter／Ctrl+C 依清單順序以換行合併；圖片／檔案須單選。
++- 頂部來源選單預設歷史，可選收藏、暫存、AI 用語、快速用語與既有資料夾。搜尋限制在目前來源。來源選擇保留於本次程序，不改管理介面篩選。
++- 預設點視窗外收合；勾「保持開啟」後點外不收合。設定保存；Esc、Enter 貼上依舊收合。
++- Source 附 BUILD_PORTABLE.py 與 CHAT_UPDATE.md。建置不綁 Work，但聊天須有執行／檔案／網路與建置工具；工具缺席時不能直接製作 Setup。
++- Source 的 validation/baseline-2.15.0 僅前版歷史證據。
++
++浮動圖示由系統匣「顯示桌面浮動圖示」或完整管理設定獨立控制；兩種視窗開啟不自動隱藏／開啟已禁用圖示。
++清單焦點 Ctrl+A 全選目前呈現項目；搜尋框 Ctrl+A 維持文字全選。多選時 footer 才出現批次刪除入口。
++GitHub Windows Workflow 隨 Source 交付，尚未安裝到 Repo、尚未完成遠端端到端驗證；CHAT_BUILD_READY = NO。
+--- 2.15.0/Tests/Program.cs
++++ 2.15.1/Tests/Program.cs
+@@ -166,6 +166,32 @@
+     pickerSettings.PickerHotkeyModifiers=6;pickerSettings.PickerHotkeyKey=119;
+     SafeState.Write(path,State(Array.Empty<ClipItem>(),pickerSettings));store.Reload();
+     Check(store.PickerHotkey==(2u,0xC0u),"Core rejects prohibited Ctrl+Shift+F8 setting and restores default");
++    // 2.15.1: production folder projection, selection copy and dismissal policy.
++    var scopes = PickerScope.Build(new[]{"工作", "工作/子層", "::favorite::/常用", "::temporary::/稍後", "::ai::/測試", "::quick::/問候", "工作"});
++    Check(scopes[0].Kind == "History" && scopes.Count == 11, "folder selector defaults to History and preserves all canonical folder roots without duplicate paths");
++    var organized = new ClipItem {Text="分類原文", HistoryVisible=false, Category="工作", Favorite=true, FavoriteFolder="常用", IsTemporary=true, TemporaryFolder="稍後", IsMarked=true, DraftText="未完成草稿", IsEditingText=true};
++    var scoped = new QuickPickerModel {Scope=scopes.Single(s=>s.Path=="工作")}; scoped.Open(new[]{organized});
++    Check(scoped.Search("").Single()==organized, "folder picker includes real organized content hidden from History");
++    scoped.Scope=scopes[0];scoped.Open(new[]{organized});Check(scoped.Search("").Count==0,"History stays independent from classified source items");
++    scoped.Scope=scopes.Single(s=>s.Path=="::favorite::/常用");scoped.Open(new[]{organized});Check(scoped.Search("").Single()==organized,"favorite subfolder uses existing FavoriteFolder ownership");
++    scoped.Scope=scopes.Single(s=>s.Path=="::temporary::/稍後");scoped.Open(new[]{organized});Check(scoped.Search("").Single()==organized,"temporary subfolder uses existing TemporaryFolder ownership");
++    organized.Category="AI 用語/測試";scoped.Scope=scopes.Single(s=>s.Path=="::ai::/測試");scoped.Open(new[]{organized});Check(scoped.Search("").Single()==organized,"AI folder matches canonical data category");
++    organized.Category="快速用語/問候";scoped.Scope=scopes.Single(s=>s.Path=="::quick::/問候");scoped.Open(new[]{organized});Check(scoped.Search("").Single()==organized,"quick phrases folder matches canonical data category");
++    organized.IsDeleted=true;scoped.Synchronize(new[]{organized});Check(scoped.Search("").Count==0 && organized.IsMarked && organized.DraftText=="未完成草稿","soft delete disappears from picker while manager draft and selection remain unchanged");
++    var textBatch = new[]{new ClipItem {Text="中文一"},new ClipItem {Text="中文二"}};
++    Check(PickerSelection.CombineText(textBatch)=="中文一"+Environment.NewLine+"中文二","multiple selected text items combine in caller display order");
++    rejected=false;try{PickerSelection.CombineText(new[]{textBatch[0],new ClipItem {Kind="Image"}});}catch(InvalidOperationException){rejected=true;}Check(rejected,"mixed multiselection rejected before clipboard mutation");
++    textBatch[1].IsDeleted=true;rejected=false;try{PickerSelection.CombineText(textBatch);}catch(InvalidOperationException){rejected=true;}Check(rejected,"stale multiselection cannot copy deleted content");
++    Check(PickerDismissal.ShouldDismiss(true,false,false,false,true),"outside deactivation dismisses default picker");
++    Check(!PickerDismissal.ShouldDismiss(true,false,false,false,false),"keep-open mode does not dismiss on outside focus change");
++    Check(!PickerDismissal.ShouldDismiss(true,false,true,false,true) && !PickerDismissal.ShouldDismiss(true,false,false,true,true) && !PickerDismissal.ShouldDismiss(true,true,false,false,true),"paste transaction, owned preview/menu and active picker suppress dismissal");
++    var dismissSettings=JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings {PickerCloseOnDeactivate=false}.Clone()))!;
++    Check(!dismissSettings.PickerCloseOnDeactivate && new AppSettings().PickerCloseOnDeactivate,"dismissal preference survives clone and persistence with safe legacy default");
++    Check(new AppSettings().FloatingIconEnabled && !JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings {FloatingIconEnabled=false}.Clone()))!.FloatingIconEnabled, "floating icon visibility is an independent persistent setting with visible default");
++    SafeState.Write(path,State(new[]{new ClipItem {Text="保護資料"}},new AppSettings {FloatingIconEnabled=false,PickerCloseOnDeactivate=false}));store.Reload();
++    Check(!store.FloatingIconEnabled, "Core reads the same floating icon visibility preference as WPF");
++    store.SetFloatingIconEnabled(true);currentSettings=JsonNode.Parse(File.ReadAllText(path))!["Settings"]!;
++    Check(store.FloatingIconEnabled && !currentSettings["PickerCloseOnDeactivate"]!.GetValue<bool>() && JsonNode.Parse(File.ReadAllText(path))!["Items"]!.AsArray().Count==1, "Core floating visibility update preserves picker preference and user history");
+     // Actual named-pipe boundary, using the production client/server (not a mock).
+     var requests=new List<UiRequest>();
+     try {
+--- 2.15.0/Tests/Tests.csproj
++++ 2.15.1/Tests/Tests.csproj
+@@ -6,6 +6,7 @@
+ <Compile Include="../ClipShelf/ClipItem.cs" />
+ <Compile Include="../ClipShelf/ClipEditing.cs" /><Compile Include="../ClipShelf/QuickPickerModel.cs" />
+ <Compile Include="../ClipShelf/AppSettings.cs" />
++<Compile Include="../ClipShelf/SidebarItem.cs" />
+ <Compile Include="../ClipShelf/BackupService.cs" />
+ </ItemGroup>
+ </Project>
+--- 2.15.0/installer/ClipShelf.nsi
++++ 2.15.1/installer/ClipShelf.nsi
+@@ -5,7 +5,7 @@
+ !include "x64.nsh"
+ Name "ClipShelf 剪貼庫"
+ !ifndef OUTPUT_FILE
+-!define OUTPUT_FILE "../../deliverables/ClipShelf-2.15.0-Setup.exe"
++!define OUTPUT_FILE "../../deliverables/ClipShelf-2.15.1-Setup.exe"
+ !endif
+ !ifndef PAYLOAD_DIR
+ !define PAYLOAD_DIR "../release"
+@@ -16,11 +16,11 @@
+ RequestExecutionLevel user
+ SetCompressor /SOLID lzma
+ BrandingText "ClipShelf · 本機剪貼庫"
+-VIProductVersion "2.15.0.0"
++VIProductVersion "2.15.1.0"
+ VIAddVersionKey /LANG=1028 "ProductName" "ClipShelf"
+ VIAddVersionKey /LANG=1028 "FileDescription" "ClipShelf Setup"
+-VIAddVersionKey /LANG=1028 "FileVersion" "2.15.0.0"
+-VIAddVersionKey /LANG=1028 "ProductVersion" "2.15.0"
++VIAddVersionKey /LANG=1028 "FileVersion" "2.15.1.0"
++VIAddVersionKey /LANG=1028 "ProductVersion" "2.15.1"
+ VIAddVersionKey /LANG=1028 "LegalCopyright" "ClipShelf"
+ !define MUI_ICON "../ClipShelf/clipshelf.ico"
+ !define MUI_UNICON "../ClipShelf/clipshelf.ico"
+@@ -86,9 +86,9 @@
+   CreateShortcut "$SMPROGRAMS\ClipShelf\ClipShelf.lnk" "$INSTDIR\ClipShelf.exe"
+   CreateShortcut "$SMPROGRAMS\ClipShelf\解除安裝.lnk" "$INSTDIR\Uninstall.exe"
+   WriteRegStr HKCU "Software\ClipShelf\Installer" "Path" "$INSTDIR"
+-  WriteRegStr HKCU "Software\ClipShelf\Installer" "Version" "2.15.0"
++  WriteRegStr HKCU "Software\ClipShelf\Installer" "Version" "2.15.1"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayName" "ClipShelf 剪貼庫"
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayVersion" "2.15.0"
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayVersion" "2.15.1"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayIcon" "$INSTDIR\ClipShelf.exe"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "InstallLocation" "$INSTDIR"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'
+--- 2.15.0/installer/uninstall-files.nsh
++++ 2.15.1/installer/uninstall-files.nsh
+@@ -1,4 +1,4 @@
+-# Generated from the exact 2.15.0 published payload.
++# Generated from exact published payload.
+ Delete "$INSTDIR\Accessibility.dll"
+ Delete "$INSTDIR\BUILD_SUCCESS.log"
+ Delete "$INSTDIR\ClipShelf.deps.json"
+@@ -35,6 +35,7 @@
+ Delete "$INSTDIR\PresentationFramework.dll"
+ Delete "$INSTDIR\PresentationNative_cor3.dll"
+ Delete "$INSTDIR\PresentationUI.dll"
++Delete "$INSTDIR\README.txt"
+ Delete "$INSTDIR\ReachFramework.dll"
+ Delete "$INSTDIR\System.AppContext.dll"
+ Delete "$INSTDIR\System.Buffers.dll"
+@@ -930,31 +931,30 @@
+ Delete "$INSTDIR\zh-Hant\UIAutomationTypes.resources.dll"
+ Delete "$INSTDIR\zh-Hant\WindowsBase.resources.dll"
+ Delete "$INSTDIR\zh-Hant\WindowsFormsIntegration.resources.dll"
+-Delete "$INSTDIR\使用說明.txt"
++RMDir "$INSTDIR\ui\zh-Hant"
++RMDir "$INSTDIR\ui\zh-Hans"
++RMDir "$INSTDIR\ui\pt-BR"
++RMDir "$INSTDIR\zh-Hant"
++RMDir "$INSTDIR\zh-Hans"
++RMDir "$INSTDIR\pt-BR"
++RMDir "$INSTDIR\ui\fr"
++RMDir "$INSTDIR\ui\ko"
++RMDir "$INSTDIR\ui\it"
++RMDir "$INSTDIR\ui\de"
++RMDir "$INSTDIR\ui\cs"
++RMDir "$INSTDIR\ui\ja"
+ RMDir "$INSTDIR\ui\tr"
+-RMDir "$INSTDIR\ui\zh-Hans"
+-RMDir "$INSTDIR\ui\cs"
+-RMDir "$INSTDIR\ui\de"
+-RMDir "$INSTDIR\ui\ja"
+ RMDir "$INSTDIR\ui\es"
+-RMDir "$INSTDIR\ui\zh-Hant"
+ RMDir "$INSTDIR\ui\ru"
+ RMDir "$INSTDIR\ui\pl"
+-RMDir "$INSTDIR\ui\pt-BR"
+-RMDir "$INSTDIR\ui\ko"
+-RMDir "$INSTDIR\ui\fr"
+-RMDir "$INSTDIR\ui\it"
++RMDir "$INSTDIR\fr"
++RMDir "$INSTDIR\ko"
++RMDir "$INSTDIR\it"
++RMDir "$INSTDIR\de"
++RMDir "$INSTDIR\cs"
++RMDir "$INSTDIR\ja"
+ RMDir "$INSTDIR\tr"
+-RMDir "$INSTDIR\zh-Hans"
+-RMDir "$INSTDIR\cs"
+-RMDir "$INSTDIR\de"
+-RMDir "$INSTDIR\ja"
++RMDir "$INSTDIR\ui"
+ RMDir "$INSTDIR\es"
+-RMDir "$INSTDIR\zh-Hant"
+-RMDir "$INSTDIR\ui"
+ RMDir "$INSTDIR\ru"
+ RMDir "$INSTDIR\pl"
+-RMDir "$INSTDIR\pt-BR"
+-RMDir "$INSTDIR\ko"
+-RMDir "$INSTDIR\fr"
+-RMDir "$INSTDIR\it"

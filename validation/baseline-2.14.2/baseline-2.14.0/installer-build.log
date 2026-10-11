@@ -1,0 +1,24 @@
+MakeNSIS v3.09-4 - Copyright 1999-2023 Contributors
+See the file COPYING for license details.
+Credits can be found in the Users Manual.
+
+Processing config: /etc/nsisconf.nsh
+Processing script file: "clipshelf-work/installer/ClipShelf.nsi" (UTF8)
+
+Processed 1 file, writing output (amd64-unicode):
+
+Output: "/workspace/scratch/bbc0cb45bfaf/deliverables/ClipShelf-2.14.0-Setup.exe"
+Install: 4 pages (256 bytes), 3 sections (1 required) (12360 bytes), 1407 instructions (39396 bytes), 503 strings (21160 bytes), 1 language table (302 bytes).
+Uninstall: 2 pages (192 bytes), 1 section (4120 bytes), 1045 instructions (29260 bytes), 1066 strings (75168 bytes), 1 language table (254 bytes).
+Datablock optimizer saved 164916 KiB (~50.2%).
+
+Using lzma (compress whole) compression.
+
+EXE header size:              120832 / 101888 bytes
+Install code:                          (67838 bytes)
+Install data:                          (167056585 bytes)
+Uninstall code+data:                   (149975 bytes)
+Compressed data:            49579620 / 167274398 bytes
+CRC (0x75ABBD97):                  4 / 4 bytes
+
+Total size:                 49700456 / 167376290 bytes (29.6%)

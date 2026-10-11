@@ -1,0 +1,52 @@
+PASS: ClipShelf.exe is native Windows x64 PE
+PASS: ClipShelf.exe version resources match current version
+PASS: ui/ClipShelf.UI.exe is native Windows x64 PE
+PASS: ui/ClipShelf.UI.exe version resources match current version
+PASS: Setup is amd64 Unicode NSIS PE
+PASS: Setup version resources match current version
+PASS: compiled WPF About text identifies current version
+PASS: compiled Core crash text identifies current version
+PASS: ClipShelf bundles runtime 8.0.31
+PASS: ClipShelf includes required runtime bytes
+PASS: ClipShelf.UI bundles runtime 8.0.31
+PASS: ClipShelf.UI includes required runtime bytes
+PASS: WPF managed/native runtime included
+PASS: complete self-contained payload present
+PASS: all 932 extracted installer files match published SHA-256
+PASS: generated uninstaller included
+PASS: payload contains no user history
+PASS: uninstall list exactly matches shipped payload
+PASS: uninstall file paths remain under INSTDIR
+PASS: installer leaves separate personal data path intact
+PASS: install/uninstall require clean Core shutdown
+PASS: ClipShelf/HistoryStore.cs byte-identical to verified preceding source
+PASS: ClipShelf/BackupService.cs byte-identical to verified preceding source
+PASS: ClipShelf/ClipItem.cs byte-identical to verified preceding source
+PASS: ClipShelf/ClipEditing.cs byte-identical to verified preceding source
+PASS: Shared/SafeState.cs byte-identical to verified preceding source
+PASS: Shared/AutoBackup.cs byte-identical to verified preceding source
+PASS: fail-closed write revalidates existing history before replace
+PASS: BUILD_EXE.cmd is ASCII/no BOM/CRLF
+PASS: BUILD_SETUP.cmd is ASCII/no BOM/CRLF
+PASS: BUILD_EXE.ps1 keeps Windows PowerShell UTF-8 BOM
+PASS: BUILD_SETUP.ps1 keeps Windows PowerShell UTF-8 BOM
+PASS: independent compact WPF Window with minimum size
+PASS: quick rows use recycling virtualization
+PASS: 45/300-second WPF expiry paths absent
+PASS: hotkey routes to resident independent picker
+PASS: native hotkey registration result and MOD_NOREPEAT are handled
+PASS: bubble patch introduces no low-level global hook
+PASS: hidden manager skips periodic attachment reindex
+PASS: build evidence states cross-build host and does not claim Windows runtime
+PASS: picker uses native Shift/Ctrl mouse multiselection
+PASS: row and selected deletion wired to existing Safe Delete
+PASS: outside dismissal preserves outside focus and keep-open setting
+PASS: folder selector wired to canonical folders without manager filter mutation
+PASS: quick-mode Core and manager routes preserve floating bubble
+PASS: delete button cannot double-click paste or delete replacement row
+PASS: portable build uses local toolchain without Work or connector dependency
+PASS: Ctrl+A scoped to list and batch actions only visible for multiselection
+PASS: independent floating preference uses sole live state writer
+PASS: picker deletion updates active manager projection and existing Trash query without clearing unrelated draft cards
+PASS: automated test report includes all existing regressions and 18 new checks; blocked IPC reported separately
+ALL 51 OFFLINE RELEASE CHECKS PASSED; NATIVE WINDOWS UNVERIFIED

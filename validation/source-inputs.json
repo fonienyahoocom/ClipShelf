@@ -1,0 +1,11 @@
+{
+  "version": "2.15.2",
+  "baseline_version": "2.15.1",
+  "source_size_bytes": 625361,
+  "source_sha256": "e9736f1eb71aeafa721b657d1fcd8ddfdbf6fbd01bb26c161c97623ddf13525d",
+  "baseline_source_drive_id": "1gKQuptwckaplUBGR-lhHmgFdrVmS8tr8",
+  "initial_formal_task_baseline": "2.15.0",
+  "reason": "2.15.1 fully packaged and saved intermediate; final source inspection found manager projection synchronization gap; add minimal patch and rebuild",
+  "user_native": "UNVERIFIED",
+  "chat_build_ready": false
+}

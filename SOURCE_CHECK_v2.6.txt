@@ -1,0 +1,35 @@
+ClipShelf v2.6.1 source-level check
+================================
+
+Base: ClipShelf v2.5.4 native selection
+
+Intended changes only:
+- Core version -> 2.6.1
+- UI assembly version -> 2.6.1 (no UI behavior changes)
+- Bubble right-click adds one menu command: 擷取文字
+- Core launches tools\ClipShelf.TextProbe.exe only when that command is chosen
+- Bubble hides during capture and is restored after helper exit/cancel
+- New independent ClipShelf.TextProbe project
+- BUILD_EXE.cmd publishes helper into ClipShelf_READY\tools
+
+Probe invariants checked in source:
+- no Clipboard API use
+- no ClipShelf history/store write
+- no InvokePattern.Invoke / Legacy DoDefaultAction / ValuePattern.SetValue
+- no OCR
+- no browser extension/CDP/WebDriver code
+- no background UIA watcher in ClipShelf.Core
+- helper is one-shot and bounded (20 s timeout, one target click, then exits)
+- target left-click is suppressed by the helper so probe remains read-only
+- report stores Control View + Raw View bounded dumps and UIA pattern evidence
+
+Static checks performed in this environment:
+- all .csproj XML parses successfully
+- modified C# files have balanced brace/parenthesis smoke checks
+- v2.5.4 UI source unchanged except assembly version
+- v2.5.4 Core source changed only in BubbleForm/CoreContext plus assembly version
+
+Limitation:
+This Linux build environment does not include the Windows .NET Desktop SDK/targeting pack,
+so the Windows WPF/WinForms solution cannot be compiled or runtime-tested here. BUILD_EXE.cmd
+is therefore the final compile check on the user's Windows machine. If it fails, send build_log.txt.

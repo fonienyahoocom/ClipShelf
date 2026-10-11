@@ -1,0 +1,34 @@
+ClipShelf v2.8.0 Experimental source check
+===========================================
+
+Scope: source/package structure check only. Not Windows runtime proof.
+
+Required stable-delivery projects:
+- ClipShelf.Core\ClipShelf.Core.csproj
+- ClipShelf\ClipShelf.csproj
+
+Experimental isolated project:
+- ClipShelf.ExperimentalCapture\ClipShelf.ExperimentalCapture.csproj
+
+Isolation checks:
+- ClipShelf.Core source is unchanged from the v2.7.0 base.
+- Main UI does not reference System.Windows.Automation directly.
+- UIA + low-level capture hooks exist only in ClipShelf.ExperimentalCapture.
+- Experimental helper communicates one-shot result through a temporary JSON file.
+- BUILD_EXE.ps1 treats Experimental Capture restore/publish failure as non-fatal after required Core/UI publish succeeds.
+
+UI checks:
+- AppSettings has ExperimentalPointerTextCapture default false.
+- Settings contains explicit experimental toggle and local-only explanation.
+- Main toolbar exposes β 指向擷取 only when enabled.
+- Capture result opens a preview dialog before any History mutation.
+- User can choose Paragraph / Line / Word / Character results and edit before save.
+
+Forbidden additions not present by design:
+- IA2/MSAA fallback
+- OCR
+- remote/cloud API
+- API key/account
+- geometry research
+- VisibleRanges geometry
+- program-specific patches

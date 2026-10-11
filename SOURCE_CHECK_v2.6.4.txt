@@ -1,0 +1,14 @@
+ClipShelf v2.6.4 source check
+===============================
+
+- Core/UI versions advanced to 2.6.4.
+- TextProbe version advanced to 0.1.4.
+- Removed explicit System.Windows.Automation.Text import.
+- Removed explicit TextPatternRangeEndpoint use from RangeFromPoint diagnostics.
+- BUILD_EXE.cmd now captures build output to TEMP first.
+- Failure handoff tries package, Desktop, then TEMP and verifies existence.
+- Failure report is opened in Notepad and copied to clipboard; Explorer /select removed.
+- Cumulative DEVELOPMENT_HISTORY.md updated with v2.6.3 real-world failure-path evidence.
+- Normal ClipShelf functionality remains unchanged.
+
+Model-side limitation: no Windows .NET 8/WPF/UIAutomation compiler/runtime is available here; user Windows build remains required.

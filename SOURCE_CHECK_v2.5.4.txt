@@ -1,0 +1,9 @@
+ClipShelf v2.5.4 source-level check
+PASS: Based directly on v2.5.3 CURRENT candidate.
+PASS: Removed custom timer/programmatic Select() drag-selection autoscroll.
+PASS: Expanded text now owns an internal native TextBox scroll viewport.
+PASS: First expansion click is separated from selection drag to avoid layout mutation during mouse-down.
+PASS: Slow 30px/notch wheel handler applies only inside expanded text.
+PASS: Existing Ctrl+C / context-menu selected-text -> History path retained.
+PASS: XAML XML parses and MainWindow event handlers resolve by source-level check.
+NOTE: Windows WPF runtime/build verification still requires the user's Windows machine.

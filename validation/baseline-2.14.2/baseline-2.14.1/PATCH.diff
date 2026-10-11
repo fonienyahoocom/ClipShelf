@@ -1,0 +1,881 @@
+--- 2.14.0/BUILD_EXE.cmd
++++ 2.14.1/BUILD_EXE.cmd
+@@ -7,7 +7,7 @@
+ cd /d "%SCRIPT_DIR%"
+ 
+ echo ================================================
+-echo ClipShelf v2.14.0 - BUILD HARNESS 3
++echo ClipShelf v2.14.1 - BUILD HARNESS 3
+ echo ================================================
+ echo.
+ 
+--- 2.14.0/BUILD_EXE.ps1
++++ 2.14.1/BUILD_EXE.ps1
+@@ -67,7 +67,7 @@
+ 
+ try {
+     Write-Log 'BUILD_EXE PowerShell harness started.'
+-    Write-Log 'ClipShelf package: v2.14.0 - Desktop Release - Build Harness 3'
++    Write-Log 'ClipShelf package: v2.14.1 - Desktop Release - Build Harness 3'
+     Write-Log "Original working directory: $OriginalWorkingDirectory"
+     Write-Log "Script directory: $ScriptDir"
+     Write-Log "PowerShell version: $($PSVersionTable.PSVersion)"
+--- 2.14.0/BUILD_SETUP.ps1
++++ 2.14.1/BUILD_SETUP.ps1
+@@ -5,7 +5,7 @@
+ $Nsis = Get-Command makensis.exe -ErrorAction SilentlyContinue
+ if ($Nsis) { $Compiler = $Nsis.Source } else { $Compiler = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe' }
+ if (-not (Test-Path $Compiler)) { throw 'Install NSIS 3.x first.' }
+-$Output = Join-Path $Root 'ClipShelf-2.14.0-Setup.exe'
++$Output = Join-Path $Root 'ClipShelf-2.14.1-Setup.exe'
+ $Lines = @('# Generated from the exact published payload.')
+ Get-ChildItem -LiteralPath $Payload -Recurse -File | ForEach-Object {
+   $Relative = $_.FullName.Substring($Payload.Length + 1).Replace('$', '$$')
+--- 2.14.0/ClipShelf/ClipItem.cs
++++ 2.14.1/ClipShelf/ClipItem.cs
+@@ -32,10 +32,55 @@
+ 
+     private string _title = "";
+     private string _note = "";
++    private bool _compact;
++    private bool _isEditingText;
++    private bool _isEditingTitle;
++    private string _draftText = "";
++    private string _draftTitle = "";
+     public string Title { get => _title; set { _title = value ?? ""; OnPropertyChanged(); OnPropertyChanged(nameof(CardHeading)); } }
+     public string Note { get => _note; set { _note = value ?? ""; OnPropertyChanged(); } }
+-    [JsonIgnore] public string CardHeading => string.IsNullOrWhiteSpace(Title) ? (Kind == "Text" ? "" : DisplayText) : Title;
+-    [JsonIgnore] public bool Compact { get; set; }
++    [JsonIgnore] public string CardHeading
++    {
++        get
++        {
++            if (!string.IsNullOrWhiteSpace(Title)) return Title;
++            var summary = DisplayText.Replace('\r', ' ').Replace('\n', ' ').Trim();
++            return summary.Length > 48 ? summary[..48] + "…" : summary;
++        }
++    }
++    [JsonIgnore] public bool Compact
++    {
++        get => _compact;
++        set { if (_compact == value) return; _compact = value; OnPropertyChanged(); OnPropertyChanged(nameof(ContentMaxHeight)); }
++    }
++    // Drafts are presentation state only. Typing, undo, cancelling and background
++    // settings saves must never write an unfinished edit to history.json.
++    [JsonIgnore] public bool IsEditingText
++    {
++        get => _isEditingText;
++        set { _isEditingText = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsInlineEditing)); OnPropertyChanged(nameof(EditorText)); OnPropertyChanged(nameof(ContentMaxHeight)); }
++    }
++    [JsonIgnore] public bool IsEditingTitle
++    {
++        get => _isEditingTitle;
++        set { _isEditingTitle = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsInlineEditing)); }
++    }
++    [JsonIgnore] public bool IsInlineEditing => IsEditingText || IsEditingTitle;
++    [JsonIgnore] public string DraftText
++    {
++        get => _draftText;
++        set { _draftText = value ?? ""; OnPropertyChanged(); OnPropertyChanged(nameof(EditorText)); }
++    }
++    [JsonIgnore] public string DraftTitle
++    {
++        get => _draftTitle;
++        set { _draftTitle = value ?? ""; OnPropertyChanged(); }
++    }
++    [JsonIgnore] public string EditorText
++    {
++        get => IsEditingText ? DraftText : DisplayText;
++        set { if (IsEditingText) DraftText = value; }
++    }
+     [JsonIgnore] public string SearchExcerpt { get; set; } = "";
+     [JsonIgnore] public string AttachmentText { get; set; } = "";
+     public Guid Id { get; set; } = Guid.NewGuid();
+@@ -48,6 +93,8 @@
+             _text = value ?? "";
+             OnPropertyChanged();
+             OnPropertyChanged(nameof(DisplayText));
++            OnPropertyChanged(nameof(CardHeading));
++            if (!IsEditingText) OnPropertyChanged(nameof(EditorText));
+         }
+     }
+     public List<string> Files { get; set; } = new();
+@@ -170,7 +217,7 @@
+     }
+ 
+     [JsonIgnore]
+-    public double ContentMaxHeight => IsContentExpanded ? 480 : Compact ? 38 : 112;
++    public double ContentMaxHeight => IsContentExpanded || IsEditingText ? 480 : Compact ? 38 : 112;
+ 
+     [JsonIgnore]
+     public bool IsMarked
+--- 2.14.0/ClipShelf/ClipShelf.csproj
++++ 2.14.1/ClipShelf/ClipShelf.csproj
+@@ -1,9 +1,9 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <OutputType>WinExe</OutputType>
+-    <Version>2.14.0</Version>
+-    <FileVersion>2.14.0.0</FileVersion>
+-    <AssemblyVersion>2.14.0.0</AssemblyVersion>
++    <Version>2.14.1</Version>
++    <FileVersion>2.14.1.0</FileVersion>
++    <AssemblyVersion>2.14.1.0</AssemblyVersion>
+     <TargetFramework>net8.0-windows</TargetFramework>
+     <UseWPF>true</UseWPF>
+     <UseWindowsForms>true</UseWindowsForms>
+--- 2.14.0/ClipShelf/MainWindow.xaml
++++ 2.14.1/ClipShelf/MainWindow.xaml
+@@ -77,6 +77,31 @@
+             <Setter Property="BorderBrush" Value="#E2E8F0"/>
+             <Setter Property="Foreground" Value="#475569"/>
+             <Setter Property="FontSize" Value="11.5"/>
++        </Style>
++        <Style x:Key="ViewModeButton" TargetType="RadioButton">
++            <Setter Property="Height" Value="30"/>
++            <Setter Property="Padding" Value="9,0"/>
++            <Setter Property="FontSize" Value="11.5"/>
++            <Setter Property="Focusable" Value="False"/>
++            <Setter Property="Cursor" Value="Hand"/>
++            <Setter Property="Template">
++                <Setter.Value>
++                    <ControlTemplate TargetType="RadioButton">
++                        <Border x:Name="ModeBorder" Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1"
++                                CornerRadius="5" Padding="{TemplateBinding Padding}">
++                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
++                        </Border>
++                        <ControlTemplate.Triggers>
++                            <Trigger Property="IsChecked" Value="True">
++                                <Setter TargetName="ModeBorder" Property="Background" Value="#CCFBF1"/>
++                                <Setter TargetName="ModeBorder" Property="BorderBrush" Value="#0D9488"/>
++                                <Setter Property="Foreground" Value="#0F766E"/>
++                                <Setter Property="FontWeight" Value="SemiBold"/>
++                            </Trigger>
++                        </ControlTemplate.Triggers>
++                    </ControlTemplate>
++                </Setter.Value>
++            </Setter>
+         </Style>
+     </Window.Resources>
+     <Border Background="White" BorderBrush="#DDE3EA" BorderThickness="1">
+@@ -215,13 +240,13 @@
+ 
+                 <Grid Grid.Column="2">
+                     <Grid.RowDefinitions>
+-                        <RowDefinition Height="78"/>
++                        <RowDefinition Height="Auto"/>
+                         <RowDefinition Height="*"/>
+                     </Grid.RowDefinitions>
+                     <Grid Grid.Row="0" Margin="16,4,12,4">
+                         <Grid.RowDefinitions>
+                             <RowDefinition Height="38"/>
+-                            <RowDefinition Height="32"/>
++                            <RowDefinition Height="Auto" MinHeight="32"/>
+                         </Grid.RowDefinitions>
+                         <Grid Grid.Row="0">
+                             <Grid.ColumnDefinitions>
+@@ -258,15 +283,19 @@
+                                 </Border>
+                             </Grid>
+                         </Grid>
+-                        <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
++                        <WrapPanel Grid.Row="1" VerticalAlignment="Center">
+                             <Button x:Name="FilterAllButton" Style="{StaticResource FilterChip}" Tag="All" Content="全部" Click="ContentFilter_Click"/>
+                             <Button x:Name="FilterTextButton" Style="{StaticResource FilterChip}" Tag="Text" Content="文字" Click="ContentFilter_Click"/>
+                             <Button x:Name="FilterImageButton" Style="{StaticResource FilterChip}" Tag="Image" Content="圖片" Click="ContentFilter_Click"/>
+                             <Button x:Name="FilterFilesButton" Style="{StaticResource FilterChip}" Tag="Files" Content="檔案" Click="ContentFilter_Click"/>
++                            <RadioButton x:Name="StandardViewButton" GroupName="CardViewMode" Style="{StaticResource ViewModeButton}"
++                                         Content="A 標準" Margin="3,0,2,0" ToolTip="標準卡片" Click="ViewMode_Click"/>
++                            <RadioButton x:Name="CompactViewButton" GroupName="CardViewMode" Style="{StaticResource ViewModeButton}"
++                                         Content="B 緊湊" Margin="0,0,3,0" ToolTip="緊湊列表：同一畫面顯示更多紀錄" Click="ViewMode_Click"/>
+                             <Button Content="檢視 / 工具 ▾" Click="ProductMenu_Click" Padding="8,3" Margin="6,0"/>
+-                            <TextBlock x:Name="SectionHintText" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="10.5" Foreground="#94A3B8"
++                            <TextBlock x:Name="SectionHintText" Visibility="Collapsed" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="10.5" Foreground="#94A3B8"
+                                        Text="歷史＝最近複製 / 擷取；刪除歷史不會刪掉已整理的原資料"/>
+-                        </StackPanel>
++                        </WrapPanel>
+                     </Grid>
+ 
+                     <ListBox x:Name="HistoryList" Grid.Row="1" BorderThickness="0" Background="White" Margin="14,0,14,10"
+@@ -299,10 +328,19 @@
+                                                     <Setter TargetName="Bd" Property="BorderBrush" Value="#0D9488"/>
+                                                     <Setter TargetName="Bd" Property="Background" Value="#E8FFFA"/>
+                                                 </DataTrigger>
++                                                <DataTrigger Binding="{Binding Compact}" Value="True">
++                                                    <Setter TargetName="Bd" Property="Padding" Value="8"/>
++                                                    <Setter TargetName="Bd" Property="CornerRadius" Value="8"/>
++                                                </DataTrigger>
+                                             </ControlTemplate.Triggers>
+                                         </ControlTemplate>
+                                     </Setter.Value>
+                                 </Setter>
++                                <Style.Triggers>
++                                    <DataTrigger Binding="{Binding Compact}" Value="True">
++                                        <Setter Property="Margin" Value="0,0,0,4"/>
++                                    </DataTrigger>
++                                </Style.Triggers>
+                             </Style>
+                         </ListBox.ItemContainerStyle>
+                         <ListBox.ItemTemplate>
+@@ -325,8 +363,12 @@
+                                               Visibility="{Binding ShowSelector, Converter={StaticResource BoolToVisibility}}"
+                                               Tag="{Binding}" ToolTip="選取這筆" Click="ItemMark_Click"/>
+ 
+-                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+-                                        <Border Width="24" Height="22" Margin="0,0,5,0" CornerRadius="5" Background="#F8FAFC" Cursor="SizeAll"
++                                    <Grid Grid.Row="0" Grid.Column="1">
++                                        <Grid.ColumnDefinitions>
++                                            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
++                                            <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
++                                        </Grid.ColumnDefinitions>
++                                        <Border Grid.Column="0" Width="24" Height="22" Margin="0,0,5,0" CornerRadius="5" Background="#F8FAFC" Cursor="SizeAll"
+                                                 Tag="{Binding}" ToolTip="拖曳這筆紀錄到左側資料夾"
+                                                 PreviewMouseLeftButtonDown="ClipDragHandle_PreviewMouseLeftButtonDown"
+                                                 PreviewMouseMove="ClipDragHandle_PreviewMouseMove"
+@@ -343,19 +385,43 @@
+                                             </Border.Style>
+                                             <TextBlock Text="⠿" FontSize="14" Foreground="#94A3B8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                         </Border>
+-                                        <Border Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="7,2" Margin="0,0,7,0">
++                                        <Border Grid.Column="1" Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="7,2" Margin="0,0,7,0">
+                                             <TextBlock Text="{Binding KindLabel}" Foreground="#475569" FontSize="10.5" FontWeight="SemiBold"/>
+                                         </Border>
+-                                        <TextBlock MaxWidth="190" TextTrimming="CharacterEllipsis" Text="{Binding CardHeading}" FontWeight="SemiBold" Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
++                                        <Grid Grid.Column="2" MaxWidth="190" VerticalAlignment="Center">
++                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/></Grid.ColumnDefinitions>
++                                            <TextBlock TextTrimming="CharacterEllipsis" Text="{Binding CardHeading}" ToolTip="{Binding CardHeading}"
++                                                       FontWeight="SemiBold" Foreground="#64748B" FontSize="11" VerticalAlignment="Center">
++                                                <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers>
++                                                    <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
++                                                </Style.Triggers></Style></TextBlock.Style>
++                                            </TextBlock>
++                                            <TextBox x:Name="ClipTitleEditor" Text="{Binding DraftTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
++                                                     MinWidth="0" MaxWidth="170" FontSize="11" Padding="2,0" AcceptsReturn="False"
++                                                     ToolTip="Enter 儲存 · Esc 取消 · 空白恢復自動標題" ContextMenuOpening="InlineTitle_ContextMenuOpening">
++                                                <TextBox.Style><Style TargetType="TextBox"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers>
++                                                    <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
++                                                </Style.Triggers></Style></TextBox.Style>
++                                            </TextBox>
++                                            <Button Grid.Column="1" Content="✎" Tag="{Binding}" Padding="0" Width="18" Height="20"
++                                                    Background="Transparent" BorderThickness="0" Foreground="#64748B" ToolTip="重新命名標題" Click="RenameTitle_Click">
++                                                <Button.Style><Style TargetType="Button"><Style.Triggers>
++                                                    <DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
++                                                    <DataTrigger Binding="{Binding IsPendingPurge}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
++                                                </Style.Triggers></Style></Button.Style>
++                                            </Button>
++                                        </Grid>
++                                        <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                         <TextBlock Text="  ·  " Foreground="#CBD5E1" FontSize="11" VerticalAlignment="Center"/>
+                                         <TextBlock Text="{Binding TimeText}" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
+                                         <TextBlock Text="  " FontSize="11"/>
+                                         <TextBlock Text="{Binding UsageText}" Foreground="#0F766E" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                         <TextBlock Text="  " FontSize="11"/>
+-                                        <TextBlock Text="{Binding CategoryText}" Foreground="#0D9488" FontSize="11" VerticalAlignment="Center"/>
++                                        <TextBlock MaxWidth="80" TextTrimming="CharacterEllipsis" ToolTip="{Binding CategoryText}" Text="{Binding CategoryText}" Foreground="#0D9488" FontSize="11" VerticalAlignment="Center"/>
+                                         <TextBlock Text="  " FontSize="11"/>
+                                         <TextBlock Text="{Binding DeletedAtText}" Foreground="#BE123C" FontSize="11" VerticalAlignment="Center"/>
+-                                    </StackPanel>
++                                        </StackPanel>
++                                    </Grid>
+ 
+                                     <!-- The right-side blank area is card chrome, separate from selectable text.
+                                          Ctrl/Shift clicks use Windows-style multi-select; an ordinary click on an
+@@ -409,22 +475,36 @@
+                                         </StackPanel>
+                                     </Grid>
+ 
+-                                    <TextBox x:Name="ClipSelectableText" Grid.Row="1" Grid.Column="1" Text="{Binding DisplayText, Mode=OneWay}"
+-                                             IsReadOnly="True" IsReadOnlyCaretVisible="True" AcceptsReturn="True"
+-                                             BorderThickness="0" Background="Transparent" Padding="0" Margin="0,7,4,0"
+-                                             FontSize="14" Foreground="#172033" TextWrapping="Wrap" MaxHeight="{Binding ContentMaxHeight}"
+-                                             VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
++                                    <TextBox x:Name="ClipSelectableText" Grid.Row="1" Grid.Column="1" Text="{Binding EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
++                                             IsReadOnlyCaretVisible="True" AcceptsReturn="True" IsUndoEnabled="True"
++                                             BorderThickness="0" Padding="0"
++                                             Foreground="#172033" TextWrapping="Wrap" MaxHeight="{Binding ContentMaxHeight}"
++                                             HorizontalScrollBarVisibility="Disabled"
+                                              FocusVisualStyle="{x:Null}" Cursor="IBeam" SelectionBrush="#99F6E4" SelectionOpacity="0.75" IsInactiveSelectionHighlightEnabled="True"
+-                                             ToolTip="{Binding SearchExcerpt}"
+                                              PreviewMouseLeftButtonDown="ClipSelectableText_PreviewMouseLeftButtonDown"
++                                             PreviewMouseMove="ClipSelectableText_PreviewMouseMove" PreviewMouseLeftButtonUp="ClipSelectableText_PreviewMouseLeftButtonUp"
+                                              PreviewMouseWheel="ClipSelectableText_PreviewMouseWheel"
+                                              ContextMenuOpening="ClipSelectableText_ContextMenuOpening" PreviewKeyDown="ClipSelectableText_PreviewKeyDown">
+                                         <TextBox.Style>
+                                             <Style TargetType="TextBox">
++                                                <Setter Property="IsReadOnly" Value="True"/>
++                                                <Setter Property="Margin" Value="0,7,4,0"/>
++                                                <Setter Property="FontSize" Value="14"/>
++                                                <Setter Property="Background" Value="Transparent"/>
++                                                <Setter Property="ToolTip" Value="{Binding SearchExcerpt}"/>
+                                                 <Setter Property="VerticalScrollBarVisibility" Value="Hidden"/>
+                                                 <Style.Triggers>
++                                                    <DataTrigger Binding="{Binding Compact}" Value="True">
++                                                        <Setter Property="Margin" Value="0,4,4,0"/>
++                                                    </DataTrigger>
+                                                     <DataTrigger Binding="{Binding IsContentExpanded}" Value="True">
+                                                         <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
++                                                    </DataTrigger>
++                                                    <DataTrigger Binding="{Binding IsEditingText}" Value="True">
++                                                        <Setter Property="IsReadOnly" Value="False"/>
++                                                        <Setter Property="Background" Value="#F0FDFA"/>
++                                                        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
++                                                        <Setter Property="ToolTip" Value="Enter 換行 · Ctrl+Enter 儲存 · Esc 取消"/>
+                                                     </DataTrigger>
+                                                 </Style.Triggers>
+                                             </Style>
+--- 2.14.0/ClipShelf/MainWindow.xaml.cs
++++ 2.14.1/ClipShelf/MainWindow.xaml.cs
+@@ -112,6 +112,7 @@
+     public MainWindow()
+     {
+         InitializeComponent();
++        TrackInlineComposition();
+         _previousForegroundWindow = ParseReturnWindowFromArgs();
+         HistoryList.ItemsSource = _visibleItems;
+         CategoryList.ItemsSource = _categories;
+@@ -189,7 +190,8 @@
+                 _hasActivatedOnce = true;
+                 _ignoreDeactivationUntil = DateTime.UtcNow.AddMilliseconds(450);
+             }
+-            SearchBox.Focus();
++            if (_inlineEditItem is ClipItem editing) FocusInlineEditor(editing, editing.IsEditingTitle);
++            else SearchBox.Focus();
+         };
+         Deactivated += MainWindow_Deactivated;
+         SizeChanged += (_, _) => QueueSave();
+@@ -199,6 +201,7 @@
+         RefreshVisibleItems();
+         UpdateCaptureUi();
+         UpdateContentFilterUi();
++        SyncViewModeControls();
+         UpdateModeStatusUi();
+         InitializeProductFeatures();
+         QueueSave();
+@@ -317,6 +320,7 @@
+     private void HideForFastHotkey()
+     {
+         if (_allowClose) return;
++        if (!ResolveInlineEdit()) return;
+         SaveBeforeExit();
+         _shortcutHidden = true;
+         UpdateTrayUi();
+@@ -380,6 +384,7 @@
+     private void CloseForTrueHide()
+     {
+         if (_allowClose) return;
++        if (!ResolveInlineEdit()) return;
+         CancelWarmStandby();
+         try { QueueSave(); _store.SaveNowChecked(); }
+         catch (Exception ex) { MessageBox.Show(this, "尚未成功保存，已取消關閉。\n" + ex.Message, "ClipShelf", MessageBoxButton.OK, MessageBoxImage.Error); return; }
+@@ -390,6 +395,7 @@
+     private void CloseToBubble()
+     {
+         if (_allowClose) return;
++        if (!ResolveInlineEdit()) return;
+ 
+         // Hybrid low-resource mode: do not cold-start WPF every time the user briefly
+         // leaves ClipShelf.  Hide the full UI and keep it warm for a short grace
+@@ -574,6 +580,7 @@
+     {
+         if (_capturePaused) return;
+ 
++        _deferInlineClipboardRefresh = _inlineEditItem != null;
+         try
+         {
+             var sourceInfo = GetSourceInfo();
+@@ -648,6 +655,7 @@
+         {
+             // Clipboard can be temporarily locked by another process. Ignore this update.
+         }
++        finally { _deferInlineClipboardRefresh = false; }
+     }
+ 
+     private void AddOrTouchItem(ClipItem incoming)
+@@ -706,6 +714,11 @@
+ 
+     private void RefreshVisibleItems()
+     {
++        if (_deferInlineClipboardRefresh && _inlineEditItem != null)
++        {
++            _inlineClipboardRefreshPending = true;
++            return;
++        }
+         var selectedId = (HistoryList.SelectedItem as ClipItem)?.Id;
+         var query = SearchBox.Text?.Trim() ?? "";
+         var tokens = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+@@ -1392,14 +1405,16 @@
+             editMode: true, title: item.Title, note: item.Note)
+         { Owner = this };
+ 
++        var before = JsonSerializer.Deserialize<ClipItem>(JsonSerializer.Serialize(item))!;
+         _suspendAutoHide++;
+         try
+         {
+             if (dialog.ShowDialog() != true) return;
+ 
++            // Keep the original dialog/keyboard flow, but share content identity
++            // and repeat-count semantics with the new inline editor.
++            ClipEditing.SaveText(item, dialog.Value, _allItems, () => { });
+             item.Title = dialog.ItemTitle; item.Note = dialog.ItemNote;
+-            item.Text = dialog.Value;
+-            item.ContentHash = Sha256("T|" + dialog.Value);
+             item.Category = dialog.SelectedCategory;
+             item.Favorite = dialog.Favorite;
+             item.IsTemporary = dialog.Temporary;
+@@ -1409,8 +1424,20 @@
+             item.SourceApp = "ClipShelf";
+             item.SourceTitle = "手動編輯";
+ 
++            QueueSave();
++            _store.SaveNowChecked();
+             RefreshVisibleItems();
++            try { _coreBridge.NotifyStateChanged(); } catch { }
++        }
++        catch (Exception ex)
++        {
++            item.Title = before.Title; item.Note = before.Note;
++            item.Text = before.Text; item.ContentHash = before.ContentHash; item.UseCount = before.UseCount;
++            item.Category = before.Category; item.Favorite = before.Favorite; item.IsTemporary = before.IsTemporary;
++            item.FavoriteFolder = before.FavoriteFolder; item.TemporaryFolder = before.TemporaryFolder;
++            item.LastUsedAt = before.LastUsedAt; item.SourceApp = before.SourceApp; item.SourceTitle = before.SourceTitle;
+             QueueSave();
++            MessageBox.Show(this, "尚未儲存，原紀錄已保留。\n" + ex.Message, "ClipShelf", MessageBoxButton.OK, MessageBoxImage.Warning);
+         }
+         finally
+         {
+@@ -1454,10 +1481,17 @@
+         if (item.Kind == "Text")
+         {
+             var edit = new MenuItem { Header = "✎  編輯文字" };
+-            edit.Click += (_, _) => EditTextItem(item);
++            edit.Click += (_, _) => BeginInlineTextEdit(item);
+             menu.Items.Add(new Separator());
+             menu.Items.Add(edit);
+-        }
++            var details = new MenuItem { Header = "文字詳細設定（標題／備註／分類）" };
++            details.Click += (_, _) => { if (ResolveInlineEdit()) EditTextItem(item); };
++            menu.Items.Add(details);
++        }
++
++        var rename = new MenuItem { Header = "✎  重新命名標題" };
++        rename.Click += (_, _) => BeginInlineTitleEdit(item);
++        menu.Items.Add(rename);
+ 
+         var category = BuildMoveToCategoryMenu(item);
+         var favoriteFolderMenu = BuildMoveToFlagFolderMenu(item, "Favorite");
+@@ -1669,6 +1703,7 @@
+ 
+     private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+     {
++        if (!ResolveInlineEdit()) { e.Cancel = true; return; }
+         CancelWarmStandby();
+         if (!_allowClose)
+         {
+@@ -3849,7 +3884,7 @@
+         if (FindVisualAncestor<Button>(source) != null || FindVisualAncestor<CheckBox>(source) != null) return;
+         // The body text deliberately remains a native selectable TextBox. Ctrl/Shift inside
+         // the text therefore belongs to text selection and never becomes card selection.
+-        if (FindVisualAncestor<TextBox>(source) is TextBox selectable && selectable.Name == "ClipSelectableText") return;
++        if (FindVisualAncestor<TextBox>(source) is TextBox selectable && (selectable.Name == "ClipSelectableText" || IsInlineEditor(selectable))) return;
+         var container = ItemsControl.ContainerFromElement(HistoryList, source) as ListBoxItem;
+         if (container?.DataContext is not ClipItem item) return;
+ 
+@@ -4124,6 +4159,11 @@
+     {
+         if (sender is not TextBox box || box.DataContext is not ClipItem item) return;
+         if (item.Kind != "Text") return;
++        _textPressBox = box;
++        _textPressPoint = e.GetPosition(this);
++        _textPressCanCopy = !item.IsInlineEditing && !item.IsDeleted && !item.IsPendingPurge &&
++            !_multiSelectMode && e.ClickCount == 1 && Keyboard.Modifiers == ModifierKeys.None && box.SelectionLength == 0;
++        if (item.IsEditingText) return;
+ 
+         // v2.5.4: do not change layout in the middle of a native drag-selection.
+         // The first click has one job: enter full-text mode.  Once expanded, every later
+@@ -4168,6 +4208,7 @@
+ 
+     private void CollapseExpandedItem(ClipItem item)
+     {
++        if (item.IsEditingText) return;
+         item.IsContentExpanded = false;
+ 
+         // After collapsing a long internal text viewport, keep the source card visible.
+@@ -4176,7 +4217,7 @@
+ 
+     private void ClipSelectableText_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+     {
+-        if (sender is not TextBox box || box.DataContext is not ClipItem item || !item.IsContentExpanded)
++        if (sender is not TextBox box || box.DataContext is not ClipItem item || (!item.IsContentExpanded && !item.IsEditingText))
+             return;
+ 
+         var viewer = FindVisualChild<ScrollViewer>(box);
+@@ -4199,7 +4240,7 @@
+         // moving the outer card list; this is what makes native selection/autoscroll stable.
+         if (FindVisualAncestor<TextBox>(e.OriginalSource as DependencyObject) is TextBox textBox &&
+             textBox.Name == "ClipSelectableText" &&
+-            textBox.DataContext is ClipItem textItem && textItem.IsContentExpanded)
++            textBox.DataContext is ClipItem textItem && (textItem.IsContentExpanded || textItem.IsEditingText))
+             return;
+ 
+         // Keep the old gentle outer-list scrolling for expanded cards when the pointer is
+@@ -4220,6 +4261,7 @@
+     private void ClipSelectableText_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+     {
+         if (sender is not TextBox box) return;
++        if (IsInlineEditor(box)) return;
+         if (e.Key == Key.C && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && box.SelectionLength > 0)
+         {
+             try
+@@ -4243,6 +4285,12 @@
+ 
+     private void ClipSelectableText_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+     {
++        if (sender is TextBox editor && IsInlineEditor(editor))
++        {
++            ShowInlineTextMenu(editor);
++            e.Handled = true;
++            return;
++        }
+         if (sender is not TextBox box || box.DataContext is not ClipItem item || box.SelectionLength <= 0) return;
+ 
+         var selected = box.SelectedText;
+@@ -4273,8 +4321,8 @@
+             copyWhole.Click += (_, _) => CopyItem(item);
+             menu.Items.Add(copyWhole);
+ 
+-            var edit = new MenuItem { Header = "✎  編輯整筆文字" };
+-            edit.Click += (_, _) => EditTextItem(item);
++            var edit = new MenuItem { Header = "✎  編輯文字（原地）" };
++            edit.Click += (_, _) => BeginInlineTextEdit(item);
+             menu.Items.Add(new Separator());
+             menu.Items.Add(edit);
+         }
+@@ -4303,7 +4351,7 @@
+         if (_multiSelectMode) return;
+ 
+         if (e.OriginalSource is not DependencyObject source) return;
+-        if (FindVisualAncestor<TextBox>(source) is TextBox selectable && selectable.Name == "ClipSelectableText" && selectable.SelectionLength > 0)
++        if (FindVisualAncestor<TextBox>(source) is TextBox selectable && (IsInlineEditor(selectable) || (selectable.Name == "ClipSelectableText" && selectable.SelectionLength > 0)))
+             return;
+         var container = ItemsControl.ContainerFromElement(HistoryList, source) as ListBoxItem;
+         if (container?.DataContext is not ClipItem item) return;
+@@ -4330,7 +4378,7 @@
+                 e.Handled = true;
+                 return;
+             }
+-            if (FindVisualAncestor<TextBox>(source) is TextBox selectable && selectable.Name == "ClipSelectableText")
++            if (FindVisualAncestor<TextBox>(source) is TextBox selectable && (selectable.Name == "ClipSelectableText" || IsInlineEditor(selectable)))
+                 return;
+         }
+ 
+@@ -4343,6 +4391,13 @@
+ 
+     private async void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+     {
++        // The Window preview handler runs before the TextBox. Route drafts first,
++        // so Enter never pastes a card and Esc never clears the active search.
++        if (Keyboard.FocusedElement is TextBox inlineEditor && IsInlineEditor(inlineEditor))
++        {
++            InlineEditor_KeyDown(inlineEditor, e);
++            return;
++        }
+         if (_searchDelay?.IsEnabled == true && (e.Key == Key.Enter || e.Key == Key.Up || e.Key == Key.Down)) { _searchDelay.Stop(); RefreshVisibleItems(); }
+         var actualKey = e.Key == Key.System ? e.SystemKey : e.Key;
+         if (actualKey == Key.Tab && (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) ||
+--- 2.14.0/ClipShelf/ProductFeatures.cs
++++ 2.14.1/ClipShelf/ProductFeatures.cs
+@@ -81,7 +81,7 @@
+         Add((_settings.GlobalSearch ? "✓ " : "") + "搜尋全部內容", () => { _settings.GlobalSearch = true; RefreshVisibleItems(); QueueSave(); });
+         Add((!_settings.GlobalSearch ? "✓ " : "") + "只搜尋目前資料夾", () => { _settings.GlobalSearch = false; RefreshVisibleItems(); QueueSave(); });
+         menu.Items.Add(new Separator());
+-        Add(_settings.CompactView ? "切換卡片檢視" : "切換精簡列表", () => { _settings.CompactView = !_settings.CompactView; RefreshVisibleItems(); QueueSave(); });
++        Add(_settings.CompactView ? "切換卡片檢視" : "切換精簡列表", () => SetCompactView(!_settings.CompactView));
+         Add("閱讀所選內容…", () => { if (HistoryList.SelectedItem is ClipItem item) ReadItem(item); });
+         Add("暫停擷取 10 分鐘", () => {
+             if (!_capturePaused) ToggleCapturePause();
+@@ -92,7 +92,7 @@
+             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClipShelf", "auto-backups");
+             Directory.CreateDirectory(dir); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dir) { UseShellExecute = true });
+         });
+-        Add("關於 ClipShelf 2.14.0", () => MessageBox.Show(this, "ClipShelf 2.14.0\n本機剪貼庫 · 搜尋 · 整理 · 文字組合\n\nCtrl+~ 開啟 / 隱藏\nCtrl+F 搜尋，方向鍵選擇，Enter 貼上\n文字編輯：Enter 儲存，Shift+Enter 換行\n模板欄位：{{欄位名稱}}\n\n自動備份：每小時檢查，保留最近 14 份。\n資料位置：%LOCALAPPDATA%\\ClipShelf", "關於 ClipShelf"));
++        Add("關於 ClipShelf 2.14.1", () => MessageBox.Show(this, "ClipShelf 2.14.1\n本機剪貼庫 · 搜尋 · 整理 · 文字組合\n\nCtrl+~ 開啟 / 隱藏\nCtrl+F 搜尋，方向鍵選擇，Enter 貼上\n卡片原地編輯：Enter 換行，Ctrl+Enter 儲存，Esc 取消\n標題改名：Enter 儲存，Esc 取消\n文字詳細設定：Enter 儲存，Shift+Enter 換行\n模板欄位：{{欄位名稱}}\n\n自動備份：每小時檢查，保留最近 14 份。\n資料位置：%LOCALAPPDATA%\\ClipShelf", "關於 ClipShelf"));
+         ShowProductMenu(menu, (FrameworkElement)sender);
+     }
+     private void ShowProductMenu(ContextMenu menu, FrameworkElement owner)
+--- 2.14.0/ClipShelf.Core/ClipShelf.Core.csproj
++++ 2.14.1/ClipShelf.Core/ClipShelf.Core.csproj
+@@ -1,9 +1,9 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <OutputType>WinExe</OutputType>
+-    <Version>2.14.0</Version>
+-    <FileVersion>2.14.0.0</FileVersion>
+-    <AssemblyVersion>2.14.0.0</AssemblyVersion>
++    <Version>2.14.1</Version>
++    <FileVersion>2.14.1.0</FileVersion>
++    <AssemblyVersion>2.14.1.0</AssemblyVersion>
+     <TargetFramework>net8.0-windows</TargetFramework>
+     <UseWindowsForms>true</UseWindowsForms>
+     <Nullable>enable</Nullable>
+--- 2.14.0/ClipShelf.Core/CrashReporter.cs
++++ 2.14.1/ClipShelf.Core/CrashReporter.cs
+@@ -76,7 +76,7 @@
+         var sb = new StringBuilder();
+         sb.AppendLine("CLIPSHELF RUNTIME CRASH - 把這個檔案傳給 ChatGPT");
+         sb.AppendLine("====================================================");
+-        sb.AppendLine("Version: v2.14.0");
++        sb.AppendLine("Version: v2.14.1");
+         sb.AppendLine("Component: ClipShelf.Core");
+         sb.AppendLine("Source: " + source);
+         sb.AppendLine("Startup stage: " + _stage);
+--- 2.14.0/DEVELOPMENT_HISTORY.md
++++ 2.14.1/DEVELOPMENT_HISTORY.md
+@@ -1,3 +1,18 @@
++# 2.14.1 — Card Interaction Patch (2026-10-09)
++
++Baseline: explicitly supplied Google Drive ClipShelf-2.14.0-Source.zip and specification v0.3.
++A/B buttons reuse CompactView and update the original virtualized list without rebuilding it.
++Text drafts edit in the original TextBox with checked save/cancel, native editing commands and IME guards.
++Header rename reuses Title with Enter/Esc and automatic-heading fallback; body and metadata are separate.
++Ordinary single click copies; drag/modifier/selection and inline drafts do not invoke that copy route.
++Actual content edits recompute the hash, reset the old repeated-copy count and reject active collisions.
++Core/WPF split, data path, backup/import and safe-delete retained; no OCR reintroduced.
++Verification: Core/WPF win-x64 self-contained publish and 36 data/edit checks; NSIS package verification.
++Native Windows installation/upgrade, Chinese IME, clipboard gestures, scroll and DPI remain unverified.
++No Library CURRENT or old Drive release overwritten. See validation/VERIFICATION.md for evidence scope.
++
++---
++
+ # 2.14.0 — Desktop Release (2026-10-03)
+ 
+ 由 2.13.0 延伸，保留 Core/WPF 分離、資料位置、最近刪除及合併匯入。
+--- 2.14.0/README.txt
++++ 2.14.1/README.txt
+@@ -1,7 +1,7 @@
+-ClipShelf 2.14.0 — 安裝版
++ClipShelf 2.14.1 — 安裝版
+ 
+ 安裝與更新
+-Windows 10/11 64 位元。執行 ClipShelf-2.14.0-Setup.exe 即可，不需安裝 .NET 或自行編譯。
++Windows 10/11 64 位元。執行 ClipShelf-2.14.1-Setup.exe 即可，不需安裝 .NET 或自行編譯。
+ 安裝前先從右下角系統匣的 ClipShelf 選單「退出」舊版；只關閉管理視窗不等於退出。
+ 日後更新同樣執行新版安裝包，不必先解除安裝。
+ 程式安裝到目前使用者的 %LOCALAPPDATA%\Programs\ClipShelf。
+@@ -10,6 +10,9 @@
+ 此包尚未使用付費程式碼簽章；Windows 可能顯示發行者未知。
+ 
+ 使用方式
++主視窗「A 標準／B 緊湊」可直接切換卡片密度，保留最後設定。
++更多／右鍵「編輯文字」在原區域修改：Enter 換行、Ctrl+Enter 儲存、Esc 取消。
++標題旁鉛筆或右鍵「重新命名標題」：Enter 儲存、Esc 取消，清空名稱恢復自動摘要。
+ 安裝後可由桌面／開始功能表開啟。Ctrl+~ 呼叫管理介面。
+ 「檢視 / 工具」可切換全庫搜尋／目前分類搜尋、精簡檢視、閱讀視窗及暫停擷取。
+ 搜尋以空白分隔多個關鍵字，所有關鍵字都符合才顯示。
+@@ -28,9 +31,11 @@
+ 「檢視 / 工具」可開啟自動備份資料夾，STATUS.txt 記錄結果與略過項目。
+ 
+ 這次驗證
+-已完成 Windows x64 自含執行環境編譯，資料與備份恢復測試 14 項通過。
++已完成 Windows x64 自含執行環境編譯，既有 14 項與新增 22 項資料／編輯檢查共 36 項通過。
++安裝包由 NSIS 3.09 生成並逐檔核對封裝。原生安裝與升級尚未實機驗證。
+ 完整驗證結果見 validation/VERIFICATION.md。
+ Windows 真實桌面操作、中文輸入法、快捷鍵與高 DPI 的最終體驗，仍需實機確認。
++本環境 Wine 因 socket 限制無法啟動；不把舊版 Wine 驗證視為新版通過。
+ 
+ 以後修改功能
+ 原始碼包保留 Core／WPF 分離結構。修改後先執行 BUILD_EXE.cmd，再執行 BUILD_SETUP.cmd。
+--- 2.14.0/README_BUILD.txt
++++ 2.14.1/README_BUILD.txt
+@@ -1,8 +1,8 @@
+-ClipShelf 2.14.0 Windows x64
++ClipShelf 2.14.1 Windows x64
+ 1. 安裝 .NET 8 SDK。
+ 2. 執行 BUILD_EXE.cmd，成功輸出 ClipShelf_READY（含執行環境）。
+ 3. 安裝 NSIS 3.x。
+-4. 執行 BUILD_SETUP.cmd，成功輸出 ClipShelf-2.14.0-Setup.exe。
++4. 執行 BUILD_SETUP.cmd，成功輸出 ClipShelf-2.14.1-Setup.exe。
+ 5. 安裝前由系統匣退出舊版；更新不須先解除安裝。
+ 
+ 資料測試：dotnet run --project Tests/Tests.csproj -c Release
+--- 2.14.0/Tests/Program.cs
++++ 2.14.1/Tests/Program.cs
+@@ -50,5 +50,61 @@
+     SafeState.Write(path,State(Array.Empty<ClipItem>(),new AppSettings {HistoryModelVersion=1,CapturePaused=true,CaptureResumeAt=DateTime.Now.AddMinutes(-1)})); store.Reload();
+     Check(!store.CapturePaused,"timed pause resumes after deadline in background");
+     Check(File.Exists(path+".previous") && Directory.GetFiles(Path.Combine(dir,"backups"),"*.json").Length>0,"atomic saves retain previous state and rolling snapshot");
++    // v2.14.1: run the production edit service and model, not a copied UI algorithm.
++    var edit=new ClipItem { Text="原始正文", Title="自訂標題", Note="備註保留", Category="AI 用語/測試", Favorite=true,
++        FavoriteFolder="收藏子層", IsTemporary=true, TemporaryFolder="暫存子層", HistoryVisible=true,
++        UseCount=4, ContentHash=CoreStateStore.Sha256("T|原始正文"), LastUsedAt=DateTime.Now.AddDays(-1) };
++    var editId=edit.Id; var editDate=edit.LastUsedAt; var created=edit.CreatedAt;
++    var notices=new List<string?>(); edit.PropertyChanged+=(_,e)=>notices.Add(e.PropertyName);
++    edit.Compact=true;
++    Check(notices.Contains("Compact") && notices.Contains("ContentMaxHeight") && edit.ContentMaxHeight==38,"compact view notifies existing card and preview height");
++    notices.Clear();edit.Compact=true;
++    Check(notices.Count==0,"unchanged compact view emits no redundant notifications");
++    edit.IsContentExpanded=true;edit.Compact=false;edit.Compact=true;
++    Check(edit.ContentMaxHeight==480,"expanded long text stays expanded across A/B switch");
++    edit.IsContentExpanded=false;edit.DraftText="未儲存的草稿";edit.IsEditingText=true;
++    Check(edit.Text=="原始正文" && edit.EditorText=="未儲存的草稿" && edit.ContentMaxHeight==480,"inline draft stays separate from saved body and can show multiline text");
++    var editJson=JsonSerializer.Serialize(edit);var restoredEdit=JsonSerializer.Deserialize<ClipItem>(editJson)!;
++    Check(restoredEdit.Text=="原始正文" && !editJson.Contains("DraftText") && !editJson.Contains("IsEditingText") && !editJson.Contains("Compact") && !restoredEdit.IsInlineEditing,"background serialization excludes draft and card-only presentation state");
++    edit.IsEditingText=false;edit.DraftText="";
++    Check(edit.Text=="原始正文" && edit.EditorText=="原始正文" && edit.UseCount==4,"cancel draft keeps original text and copy count");
++    var editPath=Path.Combine(root,"edit","history.json");
++    void PersistEdit()=>SafeState.Write(editPath,State(new[]{edit},new AppSettings {HistoryModelVersion=1,CompactView=true}));
++    ClipEditing.SaveText(edit,"修改後的中文正文\n第二行 {{欄位}}",new[]{edit},PersistEdit);
++    Check(edit.Id==editId && edit.Title=="自訂標題" && edit.Note=="備註保留" && edit.Category=="AI 用語/測試" && edit.Favorite && edit.FavoriteFolder=="收藏子層" && edit.IsTemporary && edit.TemporaryFolder=="暫存子層" && edit.LastUsedAt==editDate && edit.CreatedAt==created,"body edit preserves identity, manual title, placement and dates");
++    Check(edit.ContentHash==CoreStateStore.Sha256("T|"+edit.Text) && edit.UseCount==1,"changed body gets canonical content hash and starts new repeat count");
++    var onDisk=JsonNode.Parse(File.ReadAllText(editPath))!;
++    Check(onDisk["Items"]![0]!["Text"]!.GetValue<string>()==edit.Text && onDisk["Settings"]!["CompactView"]!.GetValue<bool>(),"checked persistence stores changed body and existing compact setting");
++    var editCore=new CoreStateStore(Path.GetDirectoryName(editPath));editCore.AddOrTouchText(edit.Text,"test","");
++    onDisk=JsonNode.Parse(File.ReadAllText(editPath))!;
++    Check(onDisk["Items"]!.AsArray().Count==1 && onDisk["Items"]![0]!["UseCount"]!.GetValue<int>()==2,"background recapture deduplicates edited content and increments new count");
++    editCore.AddOrTouchText("原始正文","test","");
++    Check(JsonNode.Parse(File.ReadAllText(editPath))!["Items"]!.AsArray().Count==2,"recapture of old content creates its own record after edit");
++    edit.UseCount=4;ClipEditing.SaveText(edit,edit.Text,new[]{edit},PersistEdit);
++    Check(edit.UseCount==4,"saving an unchanged body preserves repeat count");
++    var other=new ClipItem {Text="另一筆",ContentHash=CoreStateStore.Sha256("T|另一筆")};
++    var beforeBody=edit.Text;var beforeHash=edit.ContentHash;rejected=false;
++    try { ClipEditing.SaveText(edit,other.Text,new[]{edit,other},PersistEdit); } catch(InvalidOperationException) { rejected=true; }
++    Check(rejected && edit.Text==beforeBody && edit.ContentHash==beforeHash && edit.UseCount==4 && other.Text=="另一筆","edit collision is rejected without silently merging records or changing counts");
++    rejected=false;try { ClipEditing.SaveText(edit,"  \n",new[]{edit},PersistEdit); } catch(InvalidOperationException) {rejected=true;}
++    Check(rejected && edit.Text==beforeBody,"empty-body edit is rejected without deleting the record");
++    rejected=false;try { ClipEditing.SaveText(edit,"保存失敗測試",new[]{edit},()=>throw new IOException("fixture write failure")); } catch(IOException) {rejected=true;}
++    Check(rejected && edit.Text==beforeBody && edit.ContentHash==beforeHash && edit.UseCount==4,"failed checked body write rolls back all changed model fields");
++    var keepText=edit.Text;var keepHash=edit.ContentHash;
++    ClipEditing.SaveTitle(edit,"  我的中文卡片名稱  ",PersistEdit);
++    Check(edit.Title=="我的中文卡片名稱" && edit.CardHeading==edit.Title && edit.Text==keepText && edit.ContentHash==keepHash && edit.UseCount==4 && edit.LastUsedAt==editDate,"inline rename changes only the existing Title field");
++    restoredEdit=JsonSerializer.Deserialize<ClipItem>(JsonNode.Parse(File.ReadAllText(editPath))!["Items"]![0]!.ToJsonString())!;
++    Check(restoredEdit.Title=="我的中文卡片名稱" && restoredEdit.Text==keepText,"renamed title and body survive a real disk reload");
++    rejected=false;try {ClipEditing.SaveTitle(edit,"未保存名稱",()=>throw new IOException("fixture write failure"));} catch(IOException) {rejected=true;}
++    Check(rejected && edit.Title=="我的中文卡片名稱","failed checked title write retains the original title");
++    ClipEditing.SaveTitle(edit,"  ",PersistEdit);
++    Check(edit.Title=="" && edit.CardHeading.StartsWith("修改後的中文正文") && edit.Text==keepText,"blank title restores automatic heading without clearing body");
++    other.IsDeleted=true;other.DeletedAt=DateTime.Now;
++    ClipEditing.SaveText(edit,other.Text,new[]{edit,other},PersistEdit);
++    Check(edit.Text==other.Text && other.IsDeleted,"deleted duplicate does not block an active edit or revive deleted data");
++    edit.IsDeleted=true;rejected=false;try {ClipEditing.SaveTitle(edit,"不得改名",PersistEdit);} catch(InvalidOperationException) {rejected=true;}
++    Check(rejected && edit.Title=="","deleted record cannot be renamed until restored");edit.IsDeleted=false;
++    var mode=new AppSettings {CompactView=true};
++    Check(!new AppSettings().CompactView && mode.Clone().CompactView && JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(mode))!.CompactView,"new installs default A and existing B setting survives clone and reload");
+     Console.WriteLine($"ALL {checks} CHECKS PASSED");
+ } finally { Directory.Delete(root,true); }
+--- 2.14.0/Tests/Tests.csproj
++++ 2.14.1/Tests/Tests.csproj
+@@ -4,6 +4,7 @@
+ <Compile Include="../Shared/*.cs" />
+ <Compile Include="../ClipShelf.Core/CoreStateStore.cs" />
+ <Compile Include="../ClipShelf/ClipItem.cs" />
++<Compile Include="../ClipShelf/ClipEditing.cs" />
+ <Compile Include="../ClipShelf/AppSettings.cs" />
+ <Compile Include="../ClipShelf/BackupService.cs" />
+ </ItemGroup>
+--- 2.14.0/installer/ClipShelf.nsi
++++ 2.14.1/installer/ClipShelf.nsi
+@@ -5,7 +5,7 @@
+ !include "x64.nsh"
+ Name "ClipShelf 剪貼庫"
+ !ifndef OUTPUT_FILE
+-!define OUTPUT_FILE "../../deliverables/ClipShelf-2.14.0-Setup.exe"
++!define OUTPUT_FILE "../../deliverables/ClipShelf-2.14.1-Setup.exe"
+ !endif
+ !ifndef PAYLOAD_DIR
+ !define PAYLOAD_DIR "../release"
+@@ -16,11 +16,11 @@
+ RequestExecutionLevel user
+ SetCompressor /SOLID lzma
+ BrandingText "ClipShelf · 本機剪貼庫"
+-VIProductVersion "2.14.0.0"
++VIProductVersion "2.14.1.0"
+ VIAddVersionKey /LANG=1028 "ProductName" "ClipShelf"
+ VIAddVersionKey /LANG=1028 "FileDescription" "ClipShelf Setup"
+-VIAddVersionKey /LANG=1028 "FileVersion" "2.14.0.0"
+-VIAddVersionKey /LANG=1028 "ProductVersion" "2.14.0"
++VIAddVersionKey /LANG=1028 "FileVersion" "2.14.1.0"
++VIAddVersionKey /LANG=1028 "ProductVersion" "2.14.1"
+ VIAddVersionKey /LANG=1028 "LegalCopyright" "ClipShelf"
+ !define MUI_ICON "../ClipShelf/clipshelf.ico"
+ !define MUI_UNICON "../ClipShelf/clipshelf.ico"
+@@ -86,9 +86,9 @@
+   CreateShortcut "$SMPROGRAMS\ClipShelf\ClipShelf.lnk" "$INSTDIR\ClipShelf.exe"
+   CreateShortcut "$SMPROGRAMS\ClipShelf\解除安裝.lnk" "$INSTDIR\Uninstall.exe"
+   WriteRegStr HKCU "Software\ClipShelf\Installer" "Path" "$INSTDIR"
+-  WriteRegStr HKCU "Software\ClipShelf\Installer" "Version" "2.14.0"
++  WriteRegStr HKCU "Software\ClipShelf\Installer" "Version" "2.14.1"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayName" "ClipShelf 剪貼庫"
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayVersion" "2.14.0"
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayVersion" "2.14.1"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayIcon" "$INSTDIR\ClipShelf.exe"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "InstallLocation" "$INSTDIR"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'
+--- 2.14.0/installer/uninstall-files.nsh
++++ 2.14.1/installer/uninstall-files.nsh
+@@ -1,10 +1,13 @@
++# Generated from the exact published payload.
+ Delete "$INSTDIR\Accessibility.dll"
++Delete "$INSTDIR\BUILD_SUCCESS.log"
+ Delete "$INSTDIR\ClipShelf.deps.json"
+ Delete "$INSTDIR\ClipShelf.dll"
+ Delete "$INSTDIR\ClipShelf.exe"
+ Delete "$INSTDIR\ClipShelf.pdb"
+ Delete "$INSTDIR\ClipShelf.runtimeconfig.json"
+ Delete "$INSTDIR\D3DCompiler_47_cor3.dll"
++Delete "$INSTDIR\DEVELOPMENT_HISTORY.md"
+ Delete "$INSTDIR\DirectWriteForwarder.dll"
+ Delete "$INSTDIR\Microsoft.CSharp.dll"
+ Delete "$INSTDIR\Microsoft.DiaSymReader.Native.amd64.dll"
+@@ -926,30 +929,30 @@
+ Delete "$INSTDIR\zh-Hant\UIAutomationTypes.resources.dll"
+ Delete "$INSTDIR\zh-Hant\WindowsBase.resources.dll"
+ Delete "$INSTDIR\zh-Hant\WindowsFormsIntegration.resources.dll"
++RMDir "$INSTDIR\ui\zh-Hans"
++RMDir "$INSTDIR\ui\zh-Hant"
++RMDir "$INSTDIR\ui\pt-BR"
++RMDir "$INSTDIR\zh-Hans"
++RMDir "$INSTDIR\zh-Hant"
++RMDir "$INSTDIR\pt-BR"
++RMDir "$INSTDIR\ui\ru"
++RMDir "$INSTDIR\ui\es"
++RMDir "$INSTDIR\ui\fr"
++RMDir "$INSTDIR\ui\de"
++RMDir "$INSTDIR\ui\ja"
++RMDir "$INSTDIR\ui\ko"
++RMDir "$INSTDIR\ui\pl"
++RMDir "$INSTDIR\ui\tr"
+ RMDir "$INSTDIR\ui\cs"
+-RMDir "$INSTDIR\ui\de"
+-RMDir "$INSTDIR\ui\ko"
+-RMDir "$INSTDIR\ui\zh-Hant"
+-RMDir "$INSTDIR\ui\zh-Hans"
+-RMDir "$INSTDIR\ui\ja"
+-RMDir "$INSTDIR\ui\tr"
+-RMDir "$INSTDIR\ui\es"
+-RMDir "$INSTDIR\ui\ru"
+ RMDir "$INSTDIR\ui\it"
+-RMDir "$INSTDIR\ui\pl"
+-RMDir "$INSTDIR\ui\pt-BR"
+-RMDir "$INSTDIR\ui\fr"
++RMDir "$INSTDIR\ru"
++RMDir "$INSTDIR\es"
++RMDir "$INSTDIR\fr"
++RMDir "$INSTDIR\de"
++RMDir "$INSTDIR\ja"
++RMDir "$INSTDIR\ko"
++RMDir "$INSTDIR\pl"
++RMDir "$INSTDIR\tr"
+ RMDir "$INSTDIR\cs"
+-RMDir "$INSTDIR\de"
+-RMDir "$INSTDIR\ko"
++RMDir "$INSTDIR\it"
+ RMDir "$INSTDIR\ui"
+-RMDir "$INSTDIR\zh-Hant"
+-RMDir "$INSTDIR\zh-Hans"
+-RMDir "$INSTDIR\ja"
+-RMDir "$INSTDIR\tr"
+-RMDir "$INSTDIR\es"
+-RMDir "$INSTDIR\ru"
+-RMDir "$INSTDIR\it"
+-RMDir "$INSTDIR\pl"
+-RMDir "$INSTDIR\pt-BR"
+-RMDir "$INSTDIR\fr"

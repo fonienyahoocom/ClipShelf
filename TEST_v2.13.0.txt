@@ -1,0 +1,11 @@
+﻿ClipShelf v2.13.0 — focused Windows runtime test
+
+1. Build with BUILD_EXE.cmd. Expect BUILD SUCCESS.
+2. Launch ClipShelf_READY\ClipShelf.exe. Confirm existing history is present.
+3. Click 新增文字, type one line, press Enter. Expect immediate add.
+4. Reopen 新增文字, type first line, Shift+Enter, second line, then Enter. Expect one two-line item.
+5. Ctrl-click two card blank areas; Shift-click another. Expect contextual bar with 已選 N 項.
+6. Click 完成. Expect normal toolbar to return and marks to clear.
+7. Hover card trash. Expect danger-red only on hover; rapid trash clicks must not trigger copy/paste/hide.
+8. Confirm footer shows only user-facing status, not Core/UI engineering state.
+9. Ctrl+~ hide, then wake within five minutes. Expect warm fast wake.

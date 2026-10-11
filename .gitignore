@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/__pycache__/
+release/
+out/
+ClipShelf_READY/
+.ci-baseline/
+.ci-initial-baseline/
+*.exe
+*.zip
+BUILD失敗_把這個傳給ChatGPT.txt

@@ -1,0 +1,13 @@
+ClipShelf v2.10.1 Compile Fix 1 — source check
+
+Observed Windows build failure supplied by user:
+- BackupService.cs lines 422/424/459/465: CS0103 NormalizeLeafName not found.
+
+Fix:
+- Added private static NormalizeLeafName(string?) in BackupService.cs.
+- No changes to ClipShelf.Core source.
+- No changes to OCR helper source.
+- No changes to import flow or backup format.
+
+Expected next evidence:
+- BUILD_EXE.cmd reaches BUILD SUCCESS on the user's Windows machine.

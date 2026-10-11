@@ -1,0 +1,2 @@
+﻿Static checks passed: XAML/csproj XML; UI handler references across partials; named OCR event identity; Ctrl+Alt+O registration; helper file inclusion; CMD ASCII/no BOM/CRLF; HistoryStore/CoreStateStore/AppSettings/ClipItem byte-identical to 2.8.2.
+Windows compiler/runtime, multi-monitor capture, cancellation and timeout fault injection NOT run in this environment. Prior user evidence covers PowerShell/WinRT OCR engine only.

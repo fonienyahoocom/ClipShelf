@@ -1,0 +1,20 @@
+﻿ClipShelf v2.13.0 SOURCE CHECK
+
+BASELINE: v2.12.0 Windows Multi-Select + Safe Rapid Delete
+SCOPE: interaction maturity / no schema change
+
+Static gates:
+- XAML parses: required
+- all XAML event handlers resolve to source methods: required
+- Core/UI version aligned at 2.13.0: required
+- BUILD_EXE.cmd encoding invariant preserved: ASCII, no BOM, CRLF
+- no OCR/UIA reintroduction
+- Safe Delete / BackupService / import preview sources remain present
+
+Runtime gates on Windows 10:
+- BUILD_EXE.cmd => BUILD SUCCESS
+- Add Text: Enter adds, Shift+Enter creates newline, Cancel does not commit
+- Ctrl/Shift blank-card selection shows contextual selection toolbar
+- card trash remains rapid-click safe and turns danger-red only on hover
+- Ctrl+~ warm wake remains fast
+- existing history survives upgrade

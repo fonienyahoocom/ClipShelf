@@ -1,0 +1,22 @@
+﻿ClipShelf v2.8.0 Experimental - static/source validation
+======================================================
+
+PASS: XML ClipShelf/MainWindow.xaml
+PASS: XML ClipShelf/SettingsDialog.xaml
+PASS: XML ClipShelf/ExperimentalCaptureDialog.xaml
+PASS: XML ClipShelf/ClipShelf.csproj
+PASS: XML ClipShelf.ExperimentalCapture/ClipShelf.ExperimentalCapture.csproj
+PASS: Handlers ClipShelf/MainWindow.xaml
+PASS: Handlers ClipShelf/SettingsDialog.xaml
+PASS: Handlers ClipShelf/ExperimentalCaptureDialog.xaml
+PASS: Stable Core tree hash unchanged
+  11a2dd786fab8cb3a44a55f1da7259b60593b1fedd1d8abc39668e1a5e4e6a1f / 11a2dd786fab8cb3a44a55f1da7259b60593b1fedd1d8abc39668e1a5e4e6a1f
+PASS: Main UI has no System.Windows.Automation dependency
+PASS: Helper contains UI Automation
+PASS: Helper contains RangeFromPoint
+PASS: Helper contains ExpandToEnclosingUnit
+PASS: Helper does not write Clipboard
+PASS: Helper does not contain HTTP/network APIs
+PASS: Build helper is optional
+
+NOTE: This environment has no dotnet/Windows WPF toolchain. Windows BUILD_EXE.cmd remains the compile/runtime gate.

@@ -1,0 +1,30 @@
+{
+  "source_version": "2.15.0",
+  "source_zip_sha256": "505ec65ff91e4ab7da42b16ca36d0d8ba91249227adaf3364d129c16ceb6286a",
+  "protected_files": [
+    {
+      "path": "ClipShelf/HistoryStore.cs",
+      "sha256": "fa73f3568ec6b5c6d51c5da2a54dec054683bbbbcdcbb2c61b8727045293e835"
+    },
+    {
+      "path": "ClipShelf/BackupService.cs",
+      "sha256": "2eb5968f3704d2a34868f6af876d9fd6d862cee9bfee7f40488ef4a711a013a4"
+    },
+    {
+      "path": "ClipShelf/ClipItem.cs",
+      "sha256": "a0c29c8eb1ccc33749bb9f9f90f843e196c2072e16cfa82f204ff1cdc2ae4202"
+    },
+    {
+      "path": "ClipShelf/ClipEditing.cs",
+      "sha256": "e0409997f64d37508567719da725c88f95bd7d167d3d0be6864aa1affe82ca08"
+    },
+    {
+      "path": "Shared/SafeState.cs",
+      "sha256": "7776cade660988f679d14afb29277d79e03ee6c23c1b7aa964058c64bf45d9fb"
+    },
+    {
+      "path": "Shared/AutoBackup.cs",
+      "sha256": "40c887b5b1a98c0bb7317a888a9c721637e5a68fd8dd35e12c1302b3d82a57f5"
+    }
+  ]
+}

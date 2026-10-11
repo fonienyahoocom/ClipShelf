@@ -1,0 +1,1882 @@
+--- baseline/BUILD_EXE.cmd
++++ 2.15.0/BUILD_EXE.cmd
+@@ -7,7 +7,7 @@
+ cd /d "%SCRIPT_DIR%"
+ 
+ echo ================================================
+-echo ClipShelf v2.14.2 - BUILD HARNESS 3
++echo ClipShelf v2.15.0 - BUILD HARNESS 3
+ echo ================================================
+ echo.
+ 
+--- baseline/BUILD_EXE.ps1
++++ 2.15.0/BUILD_EXE.ps1
+@@ -67,7 +67,7 @@
+ 
+ try {
+     Write-Log 'BUILD_EXE PowerShell harness started.'
+-    Write-Log 'ClipShelf package: v2.14.2 - Desktop Release - Build Harness 3'
++    Write-Log 'ClipShelf package: v2.15.0 - Desktop Release - Build Harness 3'
+     Write-Log "Original working directory: $OriginalWorkingDirectory"
+     Write-Log "Script directory: $ScriptDir"
+     Write-Log "PowerShell version: $($PSVersionTable.PSVersion)"
+--- baseline/BUILD_SETUP.ps1
++++ 2.15.0/BUILD_SETUP.ps1
+@@ -5,7 +5,7 @@
+ $Nsis = Get-Command makensis.exe -ErrorAction SilentlyContinue
+ if ($Nsis) { $Compiler = $Nsis.Source } else { $Compiler = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe' }
+ if (-not (Test-Path $Compiler)) { throw 'Install NSIS 3.x first.' }
+-$Output = Join-Path $Root 'ClipShelf-2.14.2-Setup.exe'
++$Output = Join-Path $Root 'ClipShelf-2.15.0-Setup.exe'
+ $Lines = @('# Generated from the exact published payload.')
+ Get-ChildItem -LiteralPath $Payload -Recurse -File | ForEach-Object {
+   $Relative = $_.FullName.Substring($Payload.Length + 1).Replace('$', '$$')
+--- baseline/ClipShelf/App.xaml.cs
++++ 2.15.0/ClipShelf/App.xaml.cs
+@@ -8,20 +8,22 @@
+ 
+ public partial class App : Application
+ {
++    private System.Threading.Mutex? _instance;
+     protected override void OnStartup(StartupEventArgs e)
+     {
+         base.OnStartup(e);
++        _instance = new System.Threading.Mutex(true, @"Local\ClipShelf.UI.SingleInstance", out var first);
++        if (!first) { Shutdown(); return; }
+         EnsureCoreRunning();
+         try {
+-            var window = new MainWindow(); MainWindow = window; window.Show();
++            var window = new MainWindow(); MainWindow = window; window.StartUi(e.Args);
+         } catch (Exception ex) {
+             MessageBox.Show("ClipShelf 未啟動，原資料保持不變。\n" + ex.Message + "\n請保留 history.json 與 backups 資料夾以便恢復。", "ClipShelf 資料保護", MessageBoxButton.OK, MessageBoxImage.Error);
+             Shutdown(1);
+         }
+     }
+ 
+-    // v2 UI is intentionally disposable.  Closing MainWindow must terminate the
+-    // WPF process; the always-on work belongs to ClipShelf.Core, not this UI.
++    // Windows remain initialized until an explicit, checked Core exit request.
+ 
+     private static void EnsureCoreRunning()
+     {
+--- baseline/ClipShelf/AppSettings.cs
++++ 2.15.0/ClipShelf/AppSettings.cs
+@@ -56,8 +56,19 @@
+     public double MiniTop { get; set; }
+     public bool HasMiniPlacement { get; set; }
+ 
++    public double PickerWidth { get; set; } = 440;
++    public double PickerHeight { get; set; } = 570;
++    public double PickerLeft { get; set; }
++    public double PickerTop { get; set; }
++    public bool HasPickerPlacement { get; set; }
++    public int PickerHotkeyModifiers { get; set; } = 2;
++    public int PickerHotkeyKey { get; set; } = 0xC0;
++
+     public AppSettings Clone() => new()
+     {
++        PickerWidth = PickerWidth, PickerHeight = PickerHeight,
++        PickerLeft = PickerLeft, PickerTop = PickerTop, HasPickerPlacement = HasPickerPlacement,
++        PickerHotkeyModifiers = PickerHotkeyModifiers, PickerHotkeyKey = PickerHotkeyKey,
+         CaptureResumeAt = CaptureResumeAt,
+         CompactView = CompactView,
+         ReadingFontSize = ReadingFontSize,
+--- baseline/ClipShelf/ClipShelf.csproj
++++ 2.15.0/ClipShelf/ClipShelf.csproj
+@@ -1,9 +1,9 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <OutputType>WinExe</OutputType>
+-    <Version>2.14.2</Version>
+-    <FileVersion>2.14.2.0</FileVersion>
+-    <AssemblyVersion>2.14.2.0</AssemblyVersion>
++    <Version>2.15.0</Version>
++    <FileVersion>2.15.0.0</FileVersion>
++    <AssemblyVersion>2.15.0.0</AssemblyVersion>
+     <TargetFramework>net8.0-windows</TargetFramework>
+     <UseWPF>true</UseWPF>
+     <UseWindowsForms>true</UseWindowsForms>
+@@ -14,5 +14,5 @@
+     <ApplicationManifest>app.manifest</ApplicationManifest>
+     <ApplicationIcon>clipshelf.ico</ApplicationIcon>
+   </PropertyGroup>
+-  <ItemGroup><Compile Include="../Shared/SafeState.cs" Link="SafeState.cs" /><Compile Include="../Shared/AutoBackup.cs" Link="AutoBackup.cs" /></ItemGroup>
++  <ItemGroup><Compile Include="../Shared/SafeState.cs" Link="SafeState.cs" /><Compile Include="../Shared/AutoBackup.cs" Link="AutoBackup.cs" /><Compile Include="../Shared/UiChannel.cs" Link="UiChannel.cs" /></ItemGroup>
+ </Project>
+--- baseline/ClipShelf/MainWindow.xaml
++++ 2.15.0/ClipShelf/MainWindow.xaml
+@@ -123,7 +123,7 @@
+                     <TextBlock Text="▣" FontSize="28" Foreground="White" Margin="0,0,10,0"/>
+                     <StackPanel>
+                         <TextBlock Text="剪貼庫" Foreground="White" FontSize="20" FontWeight="SemiBold"/>
+-                        <TextBlock Text="ClipShelf" Foreground="#CCFBF1" FontSize="11"/>
++                        <Button Content="▤ 快捷選取" FontSize="11" Padding="4,1" Margin="0,2,0,0" Background="#DFF2EF" Click="QuickPicker_Click"/>
+                     </StackPanel>
+                 </StackPanel>
+ 
+--- baseline/ClipShelf/MainWindow.xaml.cs
++++ 2.15.0/ClipShelf/MainWindow.xaml.cs
+@@ -95,10 +95,11 @@
+     // trash clicks can never turn into an accidental paste + panel close.
+     private DateTime _suppressHistoryDoubleClickUntil = DateTime.MinValue;
+ 
+-    private CancellationTokenSource? _warmStandbyCts;
++    private ClipShelfShared.UiServer? _uiServer;
++    private QuickPickerWindow? _picker;
++    private uint _lastInternalClipboardSequence;
+     private bool _categoryMouseCaptured;
+-    private const int BubbleWarmStandbyMs = 45000;
+-    private const int ShortcutWarmStandbyMs = 300000;
++
+     private const int PermanentDeleteGraceSeconds = 8;
+     private DispatcherTimer? _pendingPurgeTimer;
+     private DispatcherTimer? _undoBarTimer;
+@@ -160,7 +161,7 @@
+ 
+         CategoryList.SelectedIndex = 0;
+         _coreBridge = new CoreBridge(
+-            () => Dispatcher.BeginInvoke(new Action(CloseForTrueHide)),
++            () => Dispatcher.BeginInvoke(new Action(ShutdownUi)),
+             () => Dispatcher.BeginInvoke(new Action(ToggleFastHotkey)),
+             () => Dispatcher.BeginInvoke(new Action(ActivateFromCore)),
+             () => Dispatcher.BeginInvoke(new Action(ToggleCapturePause)),
+@@ -168,18 +169,6 @@
+             () => Dispatcher.BeginInvoke(new Action(RestoreNormalSwitchMode)));
+ 
+         SourceInitialized += MainWindow_SourceInitialized;
+-        Loaded += (_, _) =>
+-        {
+-            // The Core can launch us from a tray-menu click. During that short hand-off
+-            // Windows may briefly return focus to Explorer/the tray. Do not interpret
+-            // that startup focus shuffle as a deliberate "click outside".
+-            _ignoreDeactivationUntil = DateTime.UtcNow.AddMilliseconds(900);
+-            Dispatcher.BeginInvoke(new Action(() =>
+-            {
+-                ApplyTaskSwitcherMode();
+-                ActivateFromCore();
+-            }));
+-        };
+         Activated += (_, _) =>
+         {
+             // WPF can rewrite extended styles across show/hide/state transitions.
+@@ -208,6 +197,7 @@
+         UpdateModeStatusUi();
+         InitializeProductFeatures();
+         QueueSave();
++        _uiServer = new ClipShelfShared.UiServer(request => Dispatcher.InvokeAsync(() => HandleUiRequest(request)).Task);
+     }
+ 
+     private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+@@ -240,7 +230,7 @@
+         }
+         else if (msg == WM_CLIPBOARDUPDATE)
+         {
+-            if (DateTime.UtcNow >= _ignoreClipboardUntil)
++            if (PickerClipboard.GetClipboardSequenceNumber() != _lastInternalClipboardSequence && DateTime.UtcNow >= _ignoreClipboardUntil)
+                 Dispatcher.BeginInvoke(CaptureClipboard);
+         }
+         return IntPtr.Zero;
+@@ -308,32 +298,11 @@
+         ActivateFromCore();
+     }
+ 
+-    private void ToggleFastHotkey()
+-    {
+-        if (_allowClose) return;
+-        if (IsVisible && WindowState != WindowState.Minimized && IsActive)
+-        {
+-            HideForFastHotkey();
+-            return;
+-        }
+-
+-        ActivateFromCore();
+-    }
+-
+-    private void HideForFastHotkey()
+-    {
+-        if (_allowClose) return;
+-        if (!ResolveInlineEdit()) return;
+-        SaveBeforeExit();
+-        _shortcutHidden = true;
+-        UpdateTrayUi();
+-        Hide();
+-        StartWarmStandbyCountdown(ShortcutWarmStandbyMs);
+-    }
++    private void ToggleFastHotkey() => OpenPicker(toggle: true);
+ 
+     private void ActivateFromCore()
+     {
+-        CancelWarmStandby();
++        _picker?.HidePicker();
+         _shortcutHidden = false;
+         UpdateTrayUi();
+         _ignoreDeactivationUntil = DateTime.UtcNow.AddMilliseconds(650);
+@@ -386,69 +355,17 @@
+ 
+     private void CloseForTrueHide()
+     {
+-        if (_allowClose) return;
++        if (_allowClose || _picker?.IsBusy == true) return;
+         if (!ResolveInlineEdit()) return;
+-        CancelWarmStandby();
+-        try { QueueSave(); _store.SaveNowChecked(); }
+-        catch (Exception ex) { MessageBox.Show(this, "尚未成功保存，已取消關閉。\n" + ex.Message, "ClipShelf", MessageBoxButton.OK, MessageBoxImage.Error); return; }
+-        _allowClose = true;
+-        Close();
+-    }
+-
++        SaveBeforeExit(); _picker?.HidePicker(); _shortcutHidden = true; Hide();
++    }
+     private void CloseToBubble()
+     {
+-        if (_allowClose) return;
+-        if (!ResolveInlineEdit()) return;
+-
+-        // Hybrid low-resource mode: do not cold-start WPF every time the user briefly
+-        // leaves ClipShelf.  Hide the full UI and keep it warm for a short grace
+-        // period.  Reopening during that period is effectively instant.  If the user
+-        // does not come back, the full UI process exits and only ClipShelf.Core stays.
+-        SaveBeforeExit();
+-        _coreBridge.ShowBubble();
+-        Hide();
+-        StartWarmStandbyCountdown();
+-    }
+-
+-    private void MinimizeToBubble()
+-    {
+-        CloseToBubble();
+-    }
+-
+-    private void StartWarmStandbyCountdown(int delayMs = BubbleWarmStandbyMs)
+-    {
+-        CancelWarmStandby();
+-        var cts = new CancellationTokenSource();
+-        _warmStandbyCts = cts;
+-
+-        _ = Task.Run(async () =>
+-        {
+-            try
+-            {
+-                await Task.Delay(delayMs, cts.Token);
+-                if (cts.IsCancellationRequested) return;
+-
+-                await Dispatcher.InvokeAsync(() =>
+-                {
+-                    if (_allowClose || IsVisible) return;
+-                    SaveBeforeExit();
+-                    _allowClose = true;
+-                    Close();
+-                });
+-            }
+-            catch (OperationCanceledException) { }
+-            catch { }
+-        });
+-    }
+-
+-    private void CancelWarmStandby()
+-    {
+-        var cts = _warmStandbyCts;
+-        _warmStandbyCts = null;
+-        if (cts == null) return;
+-        try { cts.Cancel(); } catch { }
+-        try { cts.Dispose(); } catch { }
+-    }
++        if (_allowClose || !ResolveInlineEdit()) return;
++        SaveBeforeExit(); _coreBridge.ShowBubble(); Hide();
++    }
++    private void MinimizeToBubble() => CloseToBubble();
++    private void CancelWarmStandby() { } // Compatibility callers: no idle-exit timer.
+ 
+     private void ApplyTaskSwitcherMode()
+     {
+@@ -820,6 +737,7 @@
+ 
+     private void QueueSave()
+     {
++        _picker?.Synchronize();
+         CaptureWindowLayout();
+         _store.QueueSave(_allItems, _folderPaths.ToList(), _settings);
+     }
+@@ -864,26 +782,8 @@
+         try
+         {
+             _ignoreClipboardUntil = DateTime.UtcNow.AddMilliseconds(700);
+-            if (item.Kind == "Text")
+-            {
+-                System.Windows.Clipboard.SetText(item.Text);
+-            }
+-            else if (item.Kind == "Files")
+-            {
+-                var list = new StringCollection();
+-                list.AddRange(item.Files.Where(File.Exists).Concat(item.Files.Where(Directory.Exists)).Distinct().ToArray());
+-                if (list.Count > 0) System.Windows.Clipboard.SetFileDropList(list);
+-            }
+-            else if (item.Kind == "Image" && item.ImagePath != null && File.Exists(item.ImagePath))
+-            {
+-                var bmp = new BitmapImage();
+-                bmp.BeginInit();
+-                bmp.CacheOption = BitmapCacheOption.OnLoad;
+-                bmp.UriSource = new Uri(item.ImagePath, UriKind.Absolute);
+-                bmp.EndInit();
+-                bmp.Freeze();
+-                System.Windows.Clipboard.SetImage(bmp);
+-            }
++            PickerClipboard.Write(item, false);
++            _lastInternalClipboardSequence = PickerClipboard.GetClipboardSequenceNumber();
+             item.UseCount++;
+             item.LastUsedAt = DateTime.Now;
+             item.HistoryVisible = true;
+@@ -1639,6 +1539,8 @@
+ 
+         var open = new System.Windows.Forms.ToolStripMenuItem("打開 ClipShelf");
+         open.Click += (_, _) => Dispatcher.Invoke(ShowMainWindow);
++        var quick = new System.Windows.Forms.ToolStripMenuItem("開啟快捷選取");
++        quick.Click += (_, _) => Dispatcher.Invoke(() => OpenPicker()); menu.Items.Add(quick);
+ 
+         _trayPauseItem = new System.Windows.Forms.ToolStripMenuItem("暫停自動保存");
+         _trayPauseItem.Click += (_, _) => Dispatcher.Invoke(ToggleCapturePause);
+@@ -1724,6 +1626,7 @@
+         _undoBarTimer?.Stop();
+         if (_hwnd != IntPtr.Zero)
+             RemoveClipboardFormatListener(_hwnd);
++        _uiServer?.Dispose(); _picker?.ShutdownPicker();
+         _source?.RemoveHook(WndProc);
+         SaveBeforeExit();
+         try { _coreBridge.NotifyUiClosed(); } catch { }
+@@ -1760,6 +1663,12 @@
+     private void Header_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+     {
+         var menu = new ContextMenu();
++        var quick = new MenuItem { Header = "開啟快捷選取" };
++        quick.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => OpenPicker()));
++        menu.Items.Add(quick);
++        var manage = new MenuItem { Header = "開啟完整管理" };
++        manage.Click += (_, _) => ActivateFromCore(); menu.Items.Add(manage);
++        menu.Items.Add(new Separator());
+         if (_switchNonInterferenceMode)
+         {
+             var restoreSwitch = new MenuItem { Header = "恢復一般工作列 / Alt+Tab 模式" };
+@@ -3769,7 +3678,7 @@
+ 
+     private void Settings_Click(object sender, RoutedEventArgs e)
+     {
+-        var dialog = new SettingsDialog(_settings) { Owner = this };
++        var dialog = new SettingsDialog(_settings, _hotkeyStatus) { Owner = this };
+         _suspendAutoHide++;
+         try
+         {
+@@ -4493,9 +4402,14 @@
+         }
+     }
+ 
++    private bool _pickerSyncQueued;
+     private void AllItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+     {
+-        // Intentionally kept lightweight; refresh/save is controlled by the caller.
++        // TouchExisting removes/reinserts one object in the same dispatcher turn.
++        // Observe only the completed transaction, so picker order cannot jump.
++        if (_pickerSyncQueued) return;
++        _pickerSyncQueued = true;
++        Dispatcher.BeginInvoke(new Action(() => { _pickerSyncQueued = false; _picker?.Synchronize(); }));
+     }
+ 
+     private static void SendCtrlV()
+--- baseline/ClipShelf/PickerClipboard.cs
++++ 2.15.0/ClipShelf/PickerClipboard.cs
+@@ -0,0 +1,83 @@
++using System;
++using System.Collections.Specialized;
++using System.Diagnostics;
++using System.IO;
++using System.Linq;
++using System.Runtime.InteropServices;
++using System.Threading.Tasks;
++using System.Windows;
++using System.Windows.Media.Imaging;
++
++namespace ClipShelf;
++
++internal static class PickerClipboard
++{
++    public static void Write(ClipItem item, bool plainText)
++    {
++        if (item.IsDeleted || item.IsPendingPurge) throw new InvalidOperationException("這筆內容已刪除。");
++        if (plainText && item.Kind != "Text") throw new InvalidOperationException("純文字貼上只適用於文字。");
++        if (item.Kind == "Text") Clipboard.SetText(item.Text);
++        else if (item.Kind == "Files")
++        {
++            var files = item.Files.Where(p => File.Exists(p) || Directory.Exists(p)).Distinct().ToArray();
++            if (files.Length != item.Files.Count || files.Length == 0) throw new FileNotFoundException("檔案已移動或不存在；請到完整管理檢查。");
++            var list = new StringCollection(); list.AddRange(files); Clipboard.SetFileDropList(list);
++        }
++        else if (item.Kind == "Image" && File.Exists(item.ImagePath))
++        {
++            var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad;
++            image.UriSource = new Uri(item.ImagePath!, UriKind.Absolute); image.EndInit(); image.Freeze(); Clipboard.SetImage(image);
++        }
++        else throw new FileNotFoundException("這筆內容無法讀取；請到完整管理檢查。");
++    }
++
++    public static bool ValidTarget(IntPtr target, int pid)
++    {
++        if (target == IntPtr.Zero || !IsWindow(target)) return false;
++        GetWindowThreadProcessId(target, out var current);
++        if (current == Environment.ProcessId || current != pid) return false;
++        try { using var process = Process.GetProcessById(pid); return process.ProcessName != "ClipShelf" && process.ProcessName != "ClipShelf.UI"; }
++        catch { return false; }
++    }
++
++    public static async Task<string?> SendPasteAsync(IntPtr target, int pid)
++    {
++        if (!ValidTarget(target, pid)) return "原視窗已關閉或沒有貼上目標。內容已複製，可自行貼上。";
++        // Never synthesize a Shift release (can switch Chinese IME). Wait for the
++        // physical shortcut/Shift+Enter to finish before injecting Ctrl+V.
++        for (var i = 0; i < 50 && ModifiersDown(); i++) await Task.Delay(10);
++        if (ModifiersDown()) return "快捷鍵尚未放開；內容已複製，可自行貼上。";
++        if (IsIconic(target)) ShowWindow(target, 9);
++        SetForegroundWindow(target);
++        for (var i = 0; i < 20 && GetForegroundWindow() != target; i++) await Task.Delay(10);
++        if (!ValidTarget(target, pid) || GetForegroundWindow() != target)
++            return "Windows 未允許恢復原視窗焦點。內容已複製，可自行貼上。";
++        var inputs = new[] { Key(0x11, false), Key(0x56, false), Key(0x56, true), Key(0x11, true) };
++        if (SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>()) != inputs.Length)
++            return "目標拒絕鍵盤輸入（可能有系統管理員權限差異）。內容已複製，可自行貼上。";
++        return null; // Submitted to Windows; the target app does not acknowledge paste.
++    }
++    public static void RestoreTarget(IntPtr target, int pid)
++    {
++        if (ValidTarget(target, pid)) SetForegroundWindow(target);
++    }
++    private static bool ModifiersDown() => new[] { 0x10, 0x11, 0x12, 0x5B, 0x5C }.Any(k => (GetAsyncKeyState(k) & 0x8000) != 0);
++    private static Input Key(ushort vk, bool up) => new() { Type = 1, Union = new InputUnion { Keyboard = new KeyboardInput { Vk = vk, Flags = up ? 2u : 0u } } };
++    [StructLayout(LayoutKind.Sequential)] private struct Input { public uint Type; public InputUnion Union; }
++    [StructLayout(LayoutKind.Explicit)] private struct InputUnion
++    {
++        [FieldOffset(0)] public KeyboardInput Keyboard;
++        [FieldOffset(0)] public MouseInput Mouse;
++    }
++    [StructLayout(LayoutKind.Sequential)] private struct KeyboardInput { public ushort Vk, Scan; public uint Flags, Time; public UIntPtr Extra; }
++    [StructLayout(LayoutKind.Sequential)] private struct MouseInput { public int X, Y; public uint Data, Flags, Time; public UIntPtr Extra; }
++    [DllImport("user32.dll")] internal static extern uint GetClipboardSequenceNumber();
++    [DllImport("user32.dll")] internal static extern IntPtr GetForegroundWindow();
++    [DllImport("user32.dll")] internal static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
++    [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr hwnd);
++    [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
++    [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hwnd, int command);
++    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hwnd);
++    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int key);
++    [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, Input[] inputs, int size);
++}
+--- baseline/ClipShelf/PickerIntegration.cs
++++ 2.15.0/ClipShelf/PickerIntegration.cs
+@@ -0,0 +1,85 @@
++using System;
++using System.Diagnostics;
++using System.Linq;
++using System.Threading.Tasks;
++using System.Windows;
++using System.Windows.Interop;
++using ClipShelfShared;
++
++namespace ClipShelf;
++
++public partial class MainWindow
++{
++    private string _hotkeyStatus = "快捷鍵由背景 Core 註冊；若衝突請從系統匣開啟並更改設定。";
++    internal void StartUi(string[] args)
++    {
++        new WindowInteropHelper(this).EnsureHandle(); // Single Clipboard Listener owned by UI while Core yields.
++        if (args.Contains("--resident")) return;
++        if (args.Contains("--quick")) OpenPicker();
++        else ActivateFromCore();
++    }
++    private void HandleUiRequest(UiRequest request)
++    {
++        if (_allowClose) return;
++        if (request.Command == "hotkey-status") { _hotkeyStatus = request.Message ?? ""; return; }
++        if (request.Command == "bubble-placement")
++        { _settings.MiniLeft = request.Left; _settings.MiniTop = request.Top; _settings.HasMiniPlacement = true; QueueSave(); _store.SaveNowChecked(); _coreBridge.NotifyStateChanged(); return; }
++        if (request.Command == "hide") { CloseForTrueHide(); return; }
++        if (request.Command == "quick" || request.Command == "toggle-quick")
++        { OpenPicker(request.Command == "toggle-quick", request.Target, request.TargetPid, request.Started); return; }
++        if (request.Command == "manage")
++        {
++            if (PickerClipboard.ValidTarget(new IntPtr(request.Target), request.TargetPid)) _previousForegroundWindow = new IntPtr(request.Target);
++            ActivateFromCore();
++        }
++    }
++    private void EnsurePicker()
++    {
++        _picker ??= new QuickPickerWindow(() => _allItems, () => _settings, QueueSave, ActivateFromCore, CopyForPickerAsync);
++    }
++    private void OpenPicker(bool toggle = false, long target = 0, int pid = 0, long started = 0)
++    {
++        if (_allowClose || _suspendAutoHide > 0 || _picker?.IsBusy == true) return;
++        EnsurePicker();
++        if (toggle && _picker!.IsVisible) { _picker.HidePicker(); return; }
++        if (_picker!.IsVisible) { _picker.Activate(); return; }
++        var handle = new IntPtr(target);
++        if (!PickerClipboard.ValidTarget(handle, pid))
++        {
++            var foreground = PickerClipboard.GetForegroundWindow();
++            PickerClipboard.GetWindowThreadProcessId(foreground, out var foregroundPid);
++            if (PickerClipboard.ValidTarget(foreground, (int)foregroundPid)) { target = foreground.ToInt64(); pid = (int)foregroundPid; }
++            else { target = _previousForegroundWindow.ToInt64(); PickerClipboard.GetWindowThreadProcessId(_previousForegroundWindow, out var savedPid); pid = (int)savedPid; }
++        }
++        // Switching windows preserves the manager's draft and selection exactly.
++        _ignoreDeactivationUntil = DateTime.UtcNow.AddMilliseconds(400);
++        Hide(); _shortcutHidden = true;
++        _picker.OpenPicker(target, pid, started);
++    }
++    private void QuickPicker_Click(object sender, RoutedEventArgs e) => OpenPicker();
++    private async Task CopyForPickerAsync(ClipItem item, bool plainText)
++    {
++        if (!_allItems.Contains(item)) throw new InvalidOperationException("紀錄已移除；請重新開啟快捷選取。");
++        for (var attempt = 0; ; attempt++)
++        {
++            try
++            {
++                PickerClipboard.Write(item, plainText);
++                _lastInternalClipboardSequence = PickerClipboard.GetClipboardSequenceNumber();
++                break;
++            }
++            catch (System.Runtime.InteropServices.COMException) when (attempt < 3) { await Task.Delay(25); }
++        }
++        item.UseCount++; item.LastUsedAt = DateTime.Now; item.HistoryVisible = true;
++        // No manager refresh; no mutation of picker order. Save failure is handled by
++        // the existing store error path and never triggers an empty-state fallback.
++        QueueSave();
++    }
++    private void ShutdownUi()
++    {
++        if (_picker?.IsBusy == true || !ResolveInlineEdit()) return;
++        try { QueueSave(); _store.SaveNowChecked(); }
++        catch (Exception ex) { MessageBox.Show(this, "尚未成功保存，已取消退出。\n" + ex.Message, "ClipShelf", MessageBoxButton.OK, MessageBoxImage.Error); return; }
++        _allowClose = true; Close();
++    }
++}
+--- baseline/ClipShelf/ProductFeatures.cs
++++ 2.15.0/ClipShelf/ProductFeatures.cs
+@@ -31,7 +31,7 @@
+             if (_capturePaused && _settings.CaptureResumeAt.HasValue && _settings.CaptureResumeAt <= DateTime.Now) {
+                 _settings.CaptureResumeAt = null; ToggleCapturePause();
+             }
+-            await IndexAttachmentsAsync();
++            if (IsVisible) await IndexAttachmentsAsync();
+         };
+         _productTimer.Start();
+         Closed += (_, _) => { _productTimer.Stop(); _searchDelay.Stop(); };
+@@ -92,7 +92,7 @@
+             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClipShelf", "auto-backups");
+             Directory.CreateDirectory(dir); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dir) { UseShellExecute = true });
+         });
+-        Add("關於 ClipShelf 2.14.2", () => MessageBox.Show(this, "ClipShelf 2.14.2\n本機剪貼庫 · 搜尋 · 整理 · 文字組合\n\nCtrl+~ 開啟 / 隱藏\nCtrl+F 搜尋，方向鍵選擇，Enter 貼上\n卡片原地編輯：Enter 換行，Ctrl+Enter 儲存，Esc 取消\n標題改名：Enter 儲存，Esc 取消\n文字詳細設定：Enter 儲存，Shift+Enter 換行\n模板欄位：{{欄位名稱}}\n\n自動備份：每小時檢查，保留最近 14 份。\n資料位置：%LOCALAPPDATA%\\ClipShelf", "關於 ClipShelf"));
++        Add("關於 ClipShelf 2.15.0", () => MessageBox.Show(this, "ClipShelf 2.15.0\n本機剪貼庫 · 搜尋 · 整理 · 文字組合\n\nCtrl+~ 開啟 / 隱藏\nCtrl+F 搜尋，方向鍵選擇，Enter 貼上\n卡片原地編輯：Enter 換行，Ctrl+Enter 儲存，Esc 取消\n標題改名：Enter 儲存，Esc 取消\n文字詳細設定：Enter 儲存，Shift+Enter 換行\n模板欄位：{{欄位名稱}}\n\n自動備份：每小時檢查，保留最近 14 份。\n資料位置：%LOCALAPPDATA%\\ClipShelf", "關於 ClipShelf"));
+         ShowProductMenu(menu, (FrameworkElement)sender);
+     }
+     private void ShowProductMenu(ContextMenu menu, FrameworkElement owner)
+--- baseline/ClipShelf/QuickPickerModel.cs
++++ 2.15.0/ClipShelf/QuickPickerModel.cs
+@@ -0,0 +1,42 @@
++using System;
++using System.Collections.Generic;
++using System.Linq;
++
++namespace ClipShelf;
++
++// Independent selection/search projection: never writes card presentation flags,
++// drafts, manager selection or the underlying history ordering.
++internal sealed class QuickPickerModel
++{
++    private List<ClipItem> _snapshot = new();
++    public void Open(IEnumerable<ClipItem> items) => _snapshot = items
++        .Where(Eligible).OrderByDescending(x => x.LastUsedAt).ToList();
++    public void Synchronize(IEnumerable<ClipItem> items)
++    {
++        var live = items.Where(Eligible).ToDictionary(x => x.Id);
++        _snapshot = _snapshot.Where(x => live.ContainsKey(x.Id)).Select(x => live[x.Id]).ToList();
++        var ids = _snapshot.Select(x => x.Id).ToHashSet();
++        _snapshot.AddRange(live.Values.Where(x => !ids.Contains(x.Id)).OrderByDescending(x => x.LastUsedAt));
++    }
++    public IReadOnlyList<ClipItem> Search(string query)
++    {
++        var words = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
++        return _snapshot.Where(x => words.All(w => Contains(x.Text, w) || Contains(x.Title, w)
++            || Contains(x.Note, w) || Contains(x.SourceApp, w) || x.Files.Any(f => Contains(f, w))))
++            .Take(1000).ToList();
++    }
++    private static bool Contains(string? text, string word) => (text ?? "").Contains(word, StringComparison.OrdinalIgnoreCase);
++    private static bool Eligible(ClipItem item) => item.HistoryVisible && !item.IsDeleted && !item.IsPendingPurge;
++}
++
++internal sealed class PickerSession
++{
++    public bool Visible { get; private set; }
++    public bool Busy { get; private set; }
++    public long Target { get; private set; }
++    public int TargetPid { get; private set; }
++    public void Open(long target, int pid) { if (Busy) return; Visible = true; Target = target; TargetPid = pid; }
++    public void Hide() => Visible = false;
++    public bool TryBeginPaste() { if (!Visible || Busy) return false; Busy = true; return true; }
++    public void EndPaste() => Busy = false;
++}
+--- baseline/ClipShelf/QuickPickerWindow.xaml
++++ 2.15.0/ClipShelf/QuickPickerWindow.xaml
+@@ -0,0 +1,53 @@
++<Window x:Class="ClipShelf.QuickPickerWindow"
++ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
++ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
++ Title="ClipShelf · 快捷選取" Width="440" Height="570" MinWidth="340" MinHeight="320"
++ Background="#F8FAFC" ShowInTaskbar="False" ResizeMode="CanResizeWithGrip"
++ WindowStartupLocation="Manual" PreviewKeyDown="Picker_KeyDown" PreviewTextInput="Picker_TextInput">
++ <Window.Resources>
++  <Style TargetType="ListBoxItem">
++   <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
++   <Setter Property="Padding" Value="10,6"/>
++   <Setter Property="Margin" Value="0,1"/>
++   <Setter Property="Background" Value="Transparent"/>
++   <Setter Property="Foreground" Value="#16202A"/>
++   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
++    <Border x:Name="Row" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
++     <ContentPresenter/>
++    </Border>
++    <ControlTemplate.Triggers>
++     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="Background" Value="#E7F4F1"/></Trigger>
++     <Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="#CCFBF1"/></Trigger>
++     <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="#0D9488"/><Setter TargetName="Row" Property="BorderThickness" Value="1"/></Trigger>
++    </ControlTemplate.Triggers>
++   </ControlTemplate></Setter.Value></Setter>
++  </Style>
++ </Window.Resources>
++ <Grid>
++  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
++  <DockPanel Background="#0F766E" Margin="0" LastChildFill="True">
++   <Button DockPanel.Dock="Right" Content="完整管理 ↗" Click="Manage_Click" Margin="8" Padding="8,4" Background="#DFF2EF"/>
++   <TextBlock Text="▤ 快捷選取" Foreground="White" FontSize="16" Margin="12" VerticalAlignment="Center"/>
++  </DockPanel>
++  <TextBox Grid.Row="1" x:Name="Search" Margin="10,9" Padding="8,6" FontSize="14" TextChanged="Search_Changed" ToolTip="直接輸入搜尋；↑↓選取、Enter貼上"/>
++  <ListBox Grid.Row="2" x:Name="Rows" Margin="6,0" BorderThickness="0" Background="Transparent"
++   SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
++   ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
++   MouseDoubleClick="Rows_DoubleClick">
++   <ListBox.ItemTemplate><DataTemplate>
++    <Grid Height="36" ToolTip="{Binding Preview}">
++     <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
++     <Grid><TextBlock Text="{Binding Glyph}" FontSize="19" VerticalAlignment="Center"/><Image Source="{Binding Thumbnail}" Width="28" Height="28" Stretch="Uniform"/></Grid>
++     <StackPanel Grid.Column="1" VerticalAlignment="Center">
++      <TextBlock Text="{Binding Summary}" TextTrimming="CharacterEllipsis" FontSize="13.5"/>
++      <TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis" FontSize="10.5" Foreground="#708090"/>
++     </StackPanel>
++    </Grid>
++   </DataTemplate></ListBox.ItemTemplate>
++  </ListBox>
++  <StackPanel Grid.Row="3" Margin="12,8,12,12">
++   <TextBlock x:Name="Status" Foreground="#0F766E" TextWrapping="Wrap" FontSize="12"/>
++   <TextBlock Text="↑↓ 選取 · Enter 貼上 · Esc 收合 · Ctrl+C 複製 · F3 預覽" FontSize="10.5" Foreground="#708090" Margin="0,4,0,0"/>
++  </StackPanel>
++ </Grid>
++</Window>
+--- baseline/ClipShelf/QuickPickerWindow.xaml.cs
++++ 2.15.0/ClipShelf/QuickPickerWindow.xaml.cs
+@@ -0,0 +1,240 @@
++using System;
++using System.Collections.Generic;
++using System.Collections.ObjectModel;
++using System.ComponentModel;
++using System.Diagnostics;
++using System.IO;
++using System.Linq;
++using System.Threading.Tasks;
++using System.Windows;
++using System.Windows.Controls;
++using System.Windows.Input;
++using System.Windows.Interop;
++using System.Windows.Media.Imaging;
++using System.Windows.Threading;
++
++namespace ClipShelf;
++
++public partial class QuickPickerWindow : Window
++{
++    private readonly QuickPickerModel _model = new();
++    private readonly PickerSession _session = new();
++    private readonly ObservableCollection<PickerRow> _rows = new();
++    private readonly Func<IEnumerable<ClipItem>> _items;
++    private readonly Func<AppSettings> _settings;
++    private readonly Action _save;
++    private readonly Action _manage;
++    private readonly Func<ClipItem, bool, Task> _copy;
++    private readonly DispatcherTimer _searchTimer;
++    private bool _shuttingDown;
++    private bool _restoringPlacement;
++    private bool _opening;
++    private bool _composing;
++    internal bool IsBusy => _session.Busy;
++
++    internal QuickPickerWindow(Func<IEnumerable<ClipItem>> items, Func<AppSettings> settings,
++        Action save, Action manage, Func<ClipItem, bool, Task> copy)
++    {
++        InitializeComponent(); _items = items; _settings = settings; _save = save; _manage = manage; _copy = copy;
++        Rows.ItemsSource = _rows;
++        _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
++        _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); ApplySearch(); };
++        Closing += (_, e) => { if (!_shuttingDown) { e.Cancel = true; HidePicker(); } };
++        SizeChanged += (_, _) => PersistPlacement(); LocationChanged += (_, _) => PersistPlacement();
++        TextCompositionManager.AddPreviewTextInputStartHandler(Search, (_, _) => _composing = true);
++        TextCompositionManager.AddPreviewTextInputHandler(Search, (_, _) => _composing = false);
++        RestorePlacement();
++    }
++
++    internal void Toggle(long target, int pid, long started)
++    {
++        if (IsBusy) return;
++        if (IsVisible) { HidePicker(); return; }
++        OpenPicker(target, pid, started);
++    }
++    internal void OpenPicker(long target, int pid, long started = 0)
++    {
++        if (IsBusy) return;
++        _session.Open(target, pid); _opening = true;
++        _model.Open(_items()); Search.Clear(); ApplySearch(); _opening = false;
++        Status.Text = Rows.Items.Count == 0 ? "目前沒有最近紀錄" : "選取內容後按 Enter 貼上";
++        Show(); Activate(); Search.Focus();
++        if (started > 0) Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
++        {
++            var elapsed = (Stopwatch.GetTimestamp() - started) * 1000d / Stopwatch.Frequency;
++            PickerDiagnostics.Record(elapsed);
++        }));
++    }
++    internal void HidePicker()
++    {
++        if (IsBusy) return;
++        _searchTimer.Stop(); PersistPlacement(); _session.Hide(); Hide();
++        PickerClipboard.RestoreTarget(new IntPtr(_session.Target), _session.TargetPid);
++    }
++    internal void ShutdownPicker() { _shuttingDown = true; _searchTimer.Stop(); Close(); }
++    internal void Synchronize()
++    {
++        if (!IsVisible || IsBusy) return;
++        _model.Synchronize(_items()); ApplySearch();
++    }
++    private void Search_Changed(object sender, TextChangedEventArgs e)
++    {
++        if (_searchTimer == null || _opening) return;
++        _searchTimer.Stop(); _searchTimer.Start();
++    }
++    private void ApplySearch()
++    {
++        var id = (Rows.SelectedItem as PickerRow)?.Item.Id;
++        var found = _model.Search(Search.Text);
++        var ids = found.Select(i => i.Id).ToHashSet();
++        for (var n = _rows.Count - 1; n >= 0; n--) if (!ids.Contains(_rows[n].Item.Id)) _rows.RemoveAt(n);
++        for (var n = 0; n < found.Count; n++)
++        {
++            var item = found[n];
++            var existing = _rows.FirstOrDefault(r => r.Item.Id == item.Id);
++            if (existing == null) _rows.Insert(n, new PickerRow(item));
++            else
++            {
++                var index = _rows.IndexOf(existing);
++                if (index != n) _rows.Move(index, n);
++                if (!ReferenceEquals(existing.Item, item)) _rows[n] = new PickerRow(item);
++                else existing.Refresh();
++            }
++        }
++        Rows.SelectedItem = Rows.Items.Cast<PickerRow>().FirstOrDefault(r => r.Item.Id == id);
++        if (Rows.SelectedIndex < 0 && Rows.Items.Count > 0) Rows.SelectedIndex = 0;
++        Status.Text = found.Count == 0 ? "沒有符合的紀錄" : $"{found.Count} 筆" + (found.Count == 1000 ? "（最多顯示 1000 筆，輸入搜尋縮小範圍）" : "");
++    }
++    private async void Picker_KeyDown(object sender, KeyEventArgs e)
++    {
++        var key = e.Key == Key.System ? e.SystemKey : e.Key;
++        if (_composing || key == Key.ImeProcessed) return;
++        if (IsBusy) { e.Handled = true; return; }
++        if (key == Key.Escape) { e.Handled = true; HidePicker(); return; }
++        if (key == Key.Up || key == Key.Down || key == Key.Enter)
++        {
++            if (_searchTimer.IsEnabled) { _searchTimer.Stop(); ApplySearch(); }
++            e.Handled = true;
++            if (key == Key.Enter) { if (!e.IsRepeat) await Commit(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)); return; }
++            if (Rows.Items.Count == 0) return;
++            Rows.SelectedIndex = Math.Clamp(Rows.SelectedIndex + (key == Key.Down ? 1 : -1), 0, Rows.Items.Count - 1);
++            Rows.ScrollIntoView(Rows.SelectedItem); return;
++        }
++        if (key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
++        {
++            e.Handled = true;
++            if (Rows.SelectedItem is PickerRow row && _session.TryBeginPaste())
++                try { await _copy(row.Item, false); Status.Text = "已複製；沒有送出貼上"; }
++                catch (Exception ex) { Status.Text = ex.Message; }
++                finally { _session.EndPaste(); }
++        }
++        if (key == Key.F3 && Rows.SelectedItem is PickerRow selected)
++        {
++            e.Handled = true;
++            var preview = new Window { Title = "內容預覽", Width = 520, Height = 420, Owner = this, ShowInTaskbar = false,
++                Content = new TextBox { Text = selected.Item.DisplayText, IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
++                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(12) } };
++            preview.ShowDialog(); Search.Focus();
++        }
++    }
++    private void Picker_TextInput(object sender, TextCompositionEventArgs e)
++    {
++        if (Search.IsKeyboardFocusWithin || string.IsNullOrEmpty(e.Text) || IsBusy) return;
++        Search.Focus(); Search.SelectedText = e.Text; Search.CaretIndex = Search.Text.Length; e.Handled = true;
++    }
++    private async void Rows_DoubleClick(object sender, MouseButtonEventArgs e)
++    {
++        // Empty space / scrollbar double-click must never paste the selected row.
++        if (ItemsControl.ContainerFromElement(Rows, e.OriginalSource as DependencyObject) is ListBoxItem)
++        { e.Handled = true; await Commit(false); }
++    }
++    private async Task Commit(bool plainText)
++    {
++        if (Rows.SelectedItem is not PickerRow row || !_session.TryBeginPaste()) return;
++        try
++        {
++            if (!PickerClipboard.ValidTarget(new IntPtr(_session.Target), _session.TargetPid))
++            { Status.Text = "原視窗已關閉或沒有可用目標；Ctrl+C 可只複製。"; return; }
++            await _copy(row.Item, plainText);
++            Hide();
++            var failure = await PickerClipboard.SendPasteAsync(new IntPtr(_session.Target), _session.TargetPid);
++            if (failure != null) { Show(); Activate(); Search.Focus(); Status.Text = failure; }
++            else _session.Hide();
++        }
++        catch (Exception ex) { if (!IsVisible) Show(); Status.Text = ex.Message; }
++        finally { _session.EndPaste(); }
++    }
++    private void Manage_Click(object sender, RoutedEventArgs e) { if (IsBusy) return; HidePicker(); _manage(); }
++    private void RestorePlacement()
++    {
++        _restoringPlacement = true;
++        var s = _settings(); Width = Finite(s.PickerWidth, 440, 340, 900); Height = Finite(s.PickerHeight, 570, 320, 1000);
++        Left = s.HasPickerPlacement && double.IsFinite(s.PickerLeft) ? s.PickerLeft : SystemParameters.WorkArea.Right - Width - 20;
++        Top = s.HasPickerPlacement && double.IsFinite(s.PickerTop) ? s.PickerTop : SystemParameters.WorkArea.Bottom - Height - 20;
++        // Convert each monitor's physical working area into this HWND's WPF DIPs.
++        var handle = new WindowInteropHelper(this).EnsureHandle();
++        var transform = HwndSource.FromHwnd(handle)?.CompositionTarget?.TransformFromDevice ?? System.Windows.Media.Matrix.Identity;
++        var proposed = new Rect(Left, Top, Width, Height);
++        var areas = System.Windows.Forms.Screen.AllScreens.Select(screen =>
++        { var a = screen.WorkingArea; return new Rect(transform.Transform(new Point(a.Left, a.Top)), transform.Transform(new Point(a.Right, a.Bottom))); }).ToList();
++        var area = areas.FirstOrDefault(a => a.Contains(new Point(Left + 30, Top + 15)));
++        if (area.IsEmpty || area.Width == 0) area = areas[0];
++        Width = Math.Min(Width, area.Width); Height = Math.Min(Height, area.Height);
++        Left = Math.Clamp(Left, area.Left, Math.Max(area.Left, area.Right - Width));
++        Top = Math.Clamp(Top, area.Top, Math.Max(area.Top, area.Bottom - Height));
++        _restoringPlacement = false;
++    }
++    private static double Finite(double value, double fallback, double min, double max) => double.IsFinite(value) ? Math.Clamp(value, min, max) : fallback;
++    private void PersistPlacement()
++    {
++        if (_restoringPlacement || !IsVisible || WindowState != WindowState.Normal) return;
++        var s = _settings(); s.PickerWidth = ActualWidth; s.PickerHeight = ActualHeight;
++        s.PickerLeft = Left; s.PickerTop = Top; s.HasPickerPlacement = true; _save();
++    }
++}
++
++internal sealed class PickerRow : INotifyPropertyChanged
++{
++    public event PropertyChangedEventHandler? PropertyChanged;
++    public void Refresh()
++    {
++        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Summary)));
++        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Detail)));
++        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Preview)));
++    }
++    public ClipItem Item { get; }
++    public PickerRow(ClipItem item) => Item = item;
++    public string Glyph => Item.Kind == "Image" ? "▧" : Item.Kind == "Files" ? "▤" : "≡";
++    public string Summary { get { var text = string.IsNullOrWhiteSpace(Item.Title) ? Item.DisplayText : Item.Title; return text[..Math.Min(text.Length, 300)].Replace('\r', ' ').Replace('\n', ' '); } }
++    public string Detail => Item.Kind == "Files" ? $"檔案 · {Item.Files.Count} 個" : Item.Kind == "Image" ? "圖片" : $"文字 · {Item.Text.Length:N0} 字 · {Item.SourceApp}";
++    public string Preview => Item.DisplayText[..Math.Min(Item.DisplayText.Length, 2000)];
++    private BitmapImage? _thumbnail;
++    private bool _loaded;
++    public BitmapImage? Thumbnail
++    {
++        get
++        {
++            if (_loaded) return _thumbnail; _loaded = true;
++            if (Item.Kind != "Image" || !File.Exists(Item.ImagePath)) return null;
++            try { var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad;
++                image.DecodePixelWidth = 56; image.UriSource = new Uri(Item.ImagePath!, UriKind.Absolute); image.EndInit(); image.Freeze(); return _thumbnail = image; }
++            catch { return null; }
++        }
++    }
++}
++
++internal static class PickerDiagnostics
++{
++    public static void Record(double elapsed)
++    {
++        try
++        {
++            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClipShelf", "diagnostics");
++            Directory.CreateDirectory(dir); var path = Path.Combine(dir, "picker-wake.csv");
++            if (File.Exists(path) && new FileInfo(path).Length > 256000) File.Move(path, path + ".previous", true);
++            using var p = Process.GetCurrentProcess();
++            File.AppendAllText(path, $"{DateTime.UtcNow:O},2.15.0,{Environment.ProcessId},{elapsed.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.WorkingSet64},{p.PrivateMemorySize64},{p.TotalProcessorTime.TotalMilliseconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n");
++        }
++        catch { }
++    }
++}
+--- baseline/ClipShelf/SettingsDialog.xaml
++++ 2.15.0/ClipShelf/SettingsDialog.xaml
+@@ -13,6 +13,13 @@
+ 
+         <ScrollViewer VerticalScrollBarVisibility="Auto">
+             <StackPanel>
++                <TextBlock Text="快捷選取" FontSize="20" FontWeight="SemiBold" Foreground="#172033"/>
++                <TextBlock x:Name="HotkeyStatus" Margin="0,4,0,8" TextWrapping="Wrap" Foreground="#64748B"/>
++                <ComboBox x:Name="PickerHotkey" Height="34" FontSize="14" Margin="0,0,0,16">
++                    <ComboBoxItem Content="Ctrl + ~（預設）" Tag="192"/>
++                    <ComboBoxItem Content="Ctrl + Alt + V" Tag="86"/>
++                    <ComboBoxItem Content="Ctrl + Alt + Q" Tag="81"/>
++                </ComboBox>
+                 <TextBlock Text="自動保存" FontSize="20" FontWeight="SemiBold" Foreground="#172033"/>
+                 <TextBlock Text="決定哪些剪貼簿內容要自動進入 ClipShelf。" Margin="0,4,0,12" Foreground="#64748B" FontSize="12"/>
+ 
+--- baseline/ClipShelf/SettingsDialog.xaml.cs
++++ 2.15.0/ClipShelf/SettingsDialog.xaml.cs
+@@ -13,9 +13,11 @@
+     private readonly AppSettings _baseSettings;
+     public AppSettings Result { get; private set; }
+ 
+-    public SettingsDialog(AppSettings settings)
++    public SettingsDialog(AppSettings settings, string hotkeyStatus = "")
+     {
+         InitializeComponent();
++        HotkeyStatus.Text = hotkeyStatus;
++        PickerHotkey.SelectedIndex = settings.PickerHotkeyKey == 86 ? 1 : settings.PickerHotkeyKey == 81 ? 2 : 0;
+         _baseSettings = settings.Clone();
+         Result = settings.Clone();
+         CaptureTextCheck.IsChecked = settings.CaptureText;
+@@ -97,6 +99,8 @@
+         }
+ 
+         Result = _baseSettings.Clone();
++        Result.PickerHotkeyKey = int.Parse(((ComboBoxItem)PickerHotkey.SelectedItem).Tag.ToString()!);
++        Result.PickerHotkeyModifiers = Result.PickerHotkeyKey == 192 ? 2 : 3;
+         Result.CaptureText = CaptureTextCheck.IsChecked == true;
+         Result.CaptureImages = CaptureImagesCheck.IsChecked == true;
+         Result.CaptureFiles = CaptureFilesCheck.IsChecked == true;
+--- baseline/ClipShelf.Core/BubbleForm.cs
++++ 2.15.0/ClipShelf.Core/BubbleForm.cs
+@@ -10,12 +10,14 @@
+     private const int WS_EX_TOOLWINDOW = 0x00000080;
+     private const int WS_EX_NOACTIVATE = 0x08000000;
+ 
++    private IntPtr _beforeMenu;
+     private bool _dragging;
+     private bool _moved;
+     private Point _mouseStart;
+     private Point _windowStart;
+ 
+     public event Action? OpenRequested;
++    public event Action? ManageRequested;
+     public event Action? HideRequested;
+     public event Action? ExitRequested;
+     public event Action<bool>? ModeChangeRequested;
+@@ -36,7 +38,9 @@
+         DoubleBuffered = true;
+ 
+         var menu = new ContextMenuStrip();
+-        var open = new ToolStripMenuItem("打開 ClipShelf");
++        var open = new ToolStripMenuItem("開啟快捷選取");
++        var manage = new ToolStripMenuItem("開啟完整管理");
++        manage.Click += (_, _) => ManageRequested?.Invoke();
+         open.Click += (_, _) => OpenRequested?.Invoke();
+ 
+         var hide = new ToolStripMenuItem("真正隱藏（Ctrl+~）");
+@@ -53,12 +57,25 @@
+         var exit = new ToolStripMenuItem("離開 ClipShelf");
+         exit.Click += (_, _) => ExitRequested?.Invoke();
+         menu.Items.Add(open);
++        menu.Items.Add(manage);
+         menu.Items.Add(new ToolStripSeparator());
+         menu.Items.Add(hide);
+         menu.Items.Add(modeMenu);
+         menu.Items.Add(new ToolStripSeparator());
+         menu.Items.Add(exit);
+         ContextMenuStrip = menu;
++        // Temporary activation only while the native popup is open. The idle bubble
++        // retains WS_EX_NOACTIVATE; no global hook or polling is installed.
++        menu.Opening += (_, _) => {
++            _beforeMenu = GetForegroundWindow();
++            _dragging = false; Capture = false;
++            SetWindowLong(Handle, -20, GetWindowLong(Handle, -20) & ~WS_EX_NOACTIVATE);
++            SetForegroundWindow(Handle);
++        };
++        menu.Closed += (_, _) => {
++            SetWindowLong(Handle, -20, GetWindowLong(Handle, -20) | WS_EX_NOACTIVATE);
++            if (GetForegroundWindow() == Handle && _beforeMenu != IntPtr.Zero) SetForegroundWindow(_beforeMenu);
++        };
+ 
+         MouseDown += Bubble_MouseDown;
+         MouseMove += Bubble_MouseMove;
+@@ -160,6 +177,11 @@
+             OpenRequested?.Invoke();
+     }
+ 
++    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
++    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hwnd);
++    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr hwnd, int index);
++    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern int SetWindowLong(IntPtr hwnd, int index, int value);
++
+     private static GraphicsPath RoundedRect(Rectangle bounds, int radius)
+     {
+         var d = radius * 2;
+--- baseline/ClipShelf.Core/ClipShelf.Core.csproj
++++ 2.15.0/ClipShelf.Core/ClipShelf.Core.csproj
+@@ -1,9 +1,9 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <OutputType>WinExe</OutputType>
+-    <Version>2.14.2</Version>
+-    <FileVersion>2.14.2.0</FileVersion>
+-    <AssemblyVersion>2.14.2.0</AssemblyVersion>
++    <Version>2.15.0</Version>
++    <FileVersion>2.15.0.0</FileVersion>
++    <AssemblyVersion>2.15.0.0</AssemblyVersion>
+     <TargetFramework>net8.0-windows</TargetFramework>
+     <UseWindowsForms>true</UseWindowsForms>
+     <Nullable>enable</Nullable>
+@@ -12,5 +12,5 @@
+     <RootNamespace>ClipShelfCore</RootNamespace>
+     <ApplicationIcon>clipshelf.ico</ApplicationIcon>
+   </PropertyGroup>
+-  <ItemGroup><Compile Include="../Shared/SafeState.cs" Link="SafeState.cs" /><Compile Include="../Shared/AutoBackup.cs" Link="AutoBackup.cs" /></ItemGroup>
++  <ItemGroup><Compile Include="../Shared/SafeState.cs" Link="SafeState.cs" /><Compile Include="../Shared/AutoBackup.cs" Link="AutoBackup.cs" /><Compile Include="../Shared/UiChannel.cs" Link="UiChannel.cs" /></ItemGroup>
+ </Project>
+--- baseline/ClipShelf.Core/CoreContext.cs
++++ 2.15.0/ClipShelf.Core/CoreContext.cs
+@@ -9,6 +9,8 @@
+ using System.Text;
+ using System.Threading;
+ using System.Windows.Forms;
++using System.Threading.Tasks;
++using ClipShelfShared;
+ 
+ namespace ClipShelfCore;
+ 
+@@ -42,6 +44,10 @@
+     private readonly RegisteredWaitHandle _setNonInterferenceModeWait;
+     private readonly RegisteredWaitHandle _setNormalModeWait;
+ 
++    private readonly System.Threading.SemaphoreSlim _requestLock = new(1, 1);
++    private IntPtr _lastExternalWindow;
++    private long _lastQuickRequest;
++    private string _hotkeyStatus = "";
+     private Process? _startedUiProcess;
+     private bool _uiStarting;
+     private bool _lastUiRunning;
+@@ -89,16 +95,21 @@
+         {
+             _store.Reload();
+             UpdateTrayUi();
++            ConfigureHotkey();
+         });
+         _setNonInterferenceModeWait = Register(_setNonInterferenceModeEvent, () => SetSwitchMode(true));
+         _setNormalModeWait = Register(_setNormalModeEvent, () => SetSwitchMode(false));
+ 
+         _bubble = new BubbleForm();
+-        _bubble.OpenRequested += OpenUi;
++        _bubble.OpenRequested += OpenQuick;
++        _bubble.ManageRequested += OpenUi;
+         _bubble.HideRequested += () => _bubble.Hide();
+         _bubble.ExitRequested += Shutdown;
+         _bubble.ModeChangeRequested += SetSwitchMode;
+-        _bubble.PositionCommitted += (left, top) => _store.SetBubblePlacement(left, top);
++        _bubble.PositionCommitted += (left, top) => {
++            if (IsUiRunning()) _ = SendRequest(new UiRequest("bubble-placement", Left: left, Top: top));
++            else { _store.Reload(); _store.SetBubblePlacement(left, top); }
++        };
+ 
+         var icon = LoadAppIcon();
+         _trayIcon = new NotifyIcon
+@@ -109,7 +120,9 @@
+         };
+ 
+         var menu = new ContextMenuStrip();
+-        var open = new ToolStripMenuItem("打開 ClipShelf");
++        var open = new ToolStripMenuItem("開啟完整管理");
++        var quick = new ToolStripMenuItem("開啟快捷選取");
++        quick.Click += (_, _) => OpenQuick();
+         open.Click += (_, _) => OpenUi();
+ 
+         _pauseItem = new ToolStripMenuItem();
+@@ -135,6 +148,7 @@
+         var exit = new ToolStripMenuItem("離開 ClipShelf");
+         exit.Click += (_, _) => Shutdown();
+ 
++        menu.Items.Add(quick);
+         menu.Items.Add(open);
+         menu.Items.Add(_pauseItem);
+         menu.Items.Add(bubble);
+@@ -146,12 +160,14 @@
+         _trayIcon.ContextMenuStrip = menu;
+         _trayIcon.MouseClick += (_, e) =>
+         {
+-            if (e.Button == MouseButtons.Left) OpenUi();
++            if (e.Button == MouseButtons.Left) OpenQuick();
+         };
+-        _trayIcon.DoubleClick += (_, _) => OpenUi();
++        
+ 
+         UpdateTrayUi();
+-        if (!background) Post(OpenUi);
++        ConfigureHotkey();
++        if (!background) Post(OpenQuick);
++        else Post(() => RequestUi("resident"));
+     }
+ 
+     private RegisteredWaitHandle Register(EventWaitHandle handle, Action action)
+@@ -197,139 +213,74 @@
+ 
+     private void ToggleUiFromHotkey()
+     {
+-        if (IsUiRunning())
+-        {
+-            // Ctrl+~ uses a dedicated fast-toggle route. The full WPF UI can stay
+-            // hidden briefly so the next shortcut wake does not cold-start it.
+-            _bubblePendingAfterUiClose = false;
+-            _bubble.Hide();
+-            _quickToggleUiEvent.Set();
+-            return;
+-        }
+-
+-        OpenUi();
+-    }
+-
+-    private void OpenUi()
++        var now = Stopwatch.GetTimestamp();
++        if ((now - _lastQuickRequest) * 1000d / Stopwatch.Frequency < 120) return;
++        _lastQuickRequest = now;
++        RequestUi("toggle-quick");
++    }
++    private void OpenQuick() => RequestUi("quick");
++    private void OpenUi() => RequestUi("manage");
++    private void ConfigureHotkey()
++    {
++        var (modifiers, key) = _store.PickerHotkey;
++        var success = _messageWindow.ConfigureHotkey(modifiers, key);
++        var label = key == 0xC0 ? "Ctrl+~" : key == 0x56 ? "Ctrl+Alt+V" : "Ctrl+Alt+Q";
++        var status = success ? label + " 已註冊" : label + " 已被其他程式佔用。請從系統匣開啟完整管理 → 設定，選擇替代快捷鍵。";
++        _hotkeyStatus = status;
++        if (!success) _trayIcon.ShowBalloonTip(10000, "ClipShelf 快捷鍵衝突", status, ToolTipIcon.Warning);
++        if (IsUiRunning()) _ = SendRequest(new UiRequest("hotkey-status", Message: status));
++    }
++    private void RequestUi(string command)
+     {
+         if (_shuttingDown) return;
++        var started = Stopwatch.GetTimestamp();
++        var target = GetForegroundWindow();
++        GetWindowThreadProcessId(target, out var pid);
++        bool external = target != IntPtr.Zero && pid != Environment.ProcessId;
++        if (external) {
++            try { using var p = Process.GetProcessById((int)pid); external = p.ProcessName != "ClipShelf.UI" && p.ProcessName != "explorer"; }
++            catch { external = false; }
++        }
++        if (external) _lastExternalWindow = target;
++        else target = _lastExternalWindow;
++        GetWindowThreadProcessId(target, out pid);
++        var request = new UiRequest(command, target.ToInt64(), (int)pid, started);
+         _bubblePendingAfterUiClose = false;
+-        _bubble.Hide();
+-
+-        if (IsUiRunning())
+-        {
+-            _showUiEvent.Set();
+-            NudgeRunningUiToForeground();
+-            return;
+-        }
+-
+-        if (_uiStarting) return;
+-        var uiPath = Path.Combine(AppContext.BaseDirectory, "ui", "ClipShelf.UI.exe");
+-        if (!File.Exists(uiPath))
+-        {
+-            MessageBox.Show(
+-                "找不到完整介面：\n" + uiPath + "\n\n請重新執行 BUILD_EXE.cmd。",
+-                "ClipShelf",
+-                MessageBoxButtons.OK,
+-                MessageBoxIcon.Error);
+-            return;
+-        }
+-
++        if (command != "resident") _bubble.Hide();
++        if (IsUiRunning()) { _ = SendRequest(request); return; }
++        if (_uiStarting) { if (command != "resident") _ = SendRequest(request); return; }
++        var path = Path.Combine(AppContext.BaseDirectory, "ui", "ClipShelf.UI.exe");
++        if (!File.Exists(path)) { MessageBox.Show("找不到完整介面，請重新安裝 ClipShelf。", "ClipShelf"); return; }
+         _uiStarting = true;
+-        var previous = GetForegroundWindow();
+-        try
+-        {
+-            var psi = new ProcessStartInfo(uiPath, $"--return-hwnd {previous.ToInt64()}")
+-            {
+-                WorkingDirectory = Path.GetDirectoryName(uiPath)!,
+-                UseShellExecute = false
+-            };
+-            var process = Process.Start(psi);
+-            if (process != null)
+-            {
+-                _startedUiProcess = process;
+-                try { AllowSetForegroundWindow(process.Id); } catch { }
+-                // Signal immediately (the named AutoResetEvent keeps the signal even if
+-                // the WPF bridge is still starting), then nudge again once the HWND exists.
+-                _showUiEvent.Set();
+-                NudgeUiToForeground(process.Id);
+-                process.EnableRaisingEvents = true;
+-                process.Exited += (_, _) => Post(() =>
+-                {
+-                    _uiStarting = false;
+-                    _lastUiRunning = false;
+-                    _store.Reload();
+-                    UpdateTrayUi();
+-                    try { process.Dispose(); } catch { }
+-                    if (ReferenceEquals(_startedUiProcess, process)) _startedUiProcess = null;
+-                    TryShowPendingBubble();
+-                });
+-            }
+-            else
+-            {
+-                _uiStarting = false;
+-            }
+-        }
+-        catch (Exception ex)
+-        {
++        try {
++            // Cold startup is hidden. The queued request is acknowledged exactly once.
++            var process = Process.Start(new ProcessStartInfo(path, "--resident") { WorkingDirectory = Path.GetDirectoryName(path)!, UseShellExecute = false });
++            if (process == null) { _uiStarting = false; return; }
++            _startedUiProcess = process; AllowSetForegroundWindow(process.Id);
++            process.EnableRaisingEvents = true;
++            process.Exited += (_, _) => Post(() => {
++                _uiStarting = false; _lastUiRunning = false;
++                if (ReferenceEquals(_startedUiProcess, process)) _startedUiProcess = null;
++                process.Dispose(); _store.Reload(); UpdateTrayUi();
++            });
++            if (command != "resident") _ = SendRequest(request);
++        } catch (Exception ex) { _uiStarting = false; MessageBox.Show("無法啟動介面：" + ex.Message, "ClipShelf"); }
++    }
++    private async Task SendRequest(UiRequest request)
++    {
++        await _requestLock.WaitAsync();
++        try {
++            if (_shuttingDown) return;
++            if (_startedUiProcess is { HasExited: false } p) AllowSetForegroundWindow(p.Id);
++            else foreach (var process in Process.GetProcessesByName("ClipShelf.UI")) {
++                using (process) { try { AllowSetForegroundWindow(process.Id); } catch { } }
++            }
++            await UiChannel.SendAsync(request);
++            if (request.Command is "quick" or "toggle-quick" or "manage") await UiChannel.SendAsync(new UiRequest("hotkey-status", Message: _hotkeyStatus));
+             _uiStarting = false;
+-            MessageBox.Show("無法打開 ClipShelf 完整介面。\n\n" + ex.Message, "ClipShelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+-        }
+-    }
+-
+-
+-    private void NudgeRunningUiToForeground()
+-    {
+-        try
+-        {
+-            var pids = Process.GetProcessesByName("ClipShelf.UI")
+-                .Where(p =>
+-                {
+-                    try { return !p.HasExited; }
+-                    catch { return false; }
+-                })
+-                .Select(p =>
+-                {
+-                    try { return p.Id; }
+-                    finally { p.Dispose(); }
+-                })
+-                .ToArray();
+-
+-            foreach (var pid in pids)
+-                NudgeUiToForeground(pid);
+-        }
+-        catch { }
+-    }
+-
+-    private void NudgeUiToForeground(int processId)
+-    {
+-        try { AllowSetForegroundWindow(processId); } catch { }
+-
+-        ThreadPool.QueueUserWorkItem(_ =>
+-        {
+-            // A newly launched WPF process may need a few hundred ms before its HWND
+-            // and dispatcher are ready. Re-signal ShowUI without polling forever.
+-            for (var i = 0; i < 12 && !_shuttingDown; i++)
+-            {
+-                try
+-                {
+-                    using var process = Process.GetProcessById(processId);
+-                    if (process.HasExited) return;
+-                    try { process.WaitForInputIdle(150); } catch { }
+-                    process.Refresh();
+-
+-                    if (process.MainWindowHandle != IntPtr.Zero)
+-                    {
+-                        try { AllowSetForegroundWindow(processId); } catch { }
+-                        _showUiEvent.Set();
+-                        return;
+-                    }
+-                }
+-                catch { return; }
+-
+-                Thread.Sleep(80);
+-            }
+-        });
++        } catch (Exception ex) {
++            Post(() => _trayIcon.ShowBalloonTip(8000, "ClipShelf 介面沒有回應", "請從系統匣再試一次；資料未被重設。 " + ex.Message, ToolTipIcon.Warning));
++        } finally { _requestLock.Release(); }
+     }
+ 
+     private bool IsUiRunning()
+@@ -369,9 +320,8 @@
+     {
+         if (_shuttingDown) return;
+ 
+-        // v2.1 keeps the WPF UI warm for a short grace period after it is hidden.
+-        // Therefore the bubble must be allowed to appear while ClipShelf.UI.exe is
+-        // still alive.  Clicking the bubble simply re-activates that warm process.
++        // WPF remains resident indefinitely; the bubble can coexist with the
++        // hidden UI and opens its independent quick picker.
+         _bubblePendingAfterUiClose = false;
+         ShowBubbleNow();
+     }
+@@ -395,7 +345,7 @@
+     {
+         _bubblePendingAfterUiClose = false;
+         _bubble.Hide();
+-        if (IsUiRunning()) _toggleUiEvent.Set();
++        if (IsUiRunning()) _ = SendRequest(new UiRequest("hide"));
+     }
+ 
+     private void TogglePause()
+@@ -429,7 +379,9 @@
+ 
+     private void CaptureClipboard()
+     {
+-        if (_shuttingDown || IsUiRunning()) return;
++        var foreground = GetForegroundWindow(); GetWindowThreadProcessId(foreground, out var sourcePid);
++        try { using var process = Process.GetProcessById((int)sourcePid); if (process.ProcessName != "ClipShelf.UI" && sourcePid != Environment.ProcessId) _lastExternalWindow = foreground; } catch { }
++        if (_shuttingDown || _uiStarting || IsUiRunning()) return;
+         try
+         {
+             if (_store.CapturePaused) return;
+@@ -538,10 +490,8 @@
+ 
+         // "Exit ClipShelf" is different from hide/minimize:
+         // it must leave no ClipShelf.UI process behind.  Ask the WPF UI to
+-        // close cleanly first so it can flush history/settings, then fall back
+-        // to WM_CLOSE and finally terminate only if an unresponsive UI refuses
+-        // to exit.  This also guarantees that ClipShelf.UI.dll is released for
+-        // an immediate update/rebuild.
++        // close cleanly first so it can flush history/settings. If the UI cannot
++        // save or still has a draft prompt, cancel exit instead of killing it.
+         if (!StopUiProcessesForExit()) {
+             _shuttingDown = false;
+             MessageBox.Show("介面尚未關閉；請先處理保存提示，再從系統匣退出。", "ClipShelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
+--- baseline/ClipShelf.Core/CoreStateStore.cs
++++ 2.15.0/ClipShelf.Core/CoreStateStore.cs
+@@ -46,6 +46,15 @@
+                 Settings["CapturePaused"] = false; Settings["CaptureResumeAt"] = null; SaveLocked();
+             }
+             return GetBool(Settings, "CapturePaused", false);
++        } }
++    }
++
++    public (uint Modifiers, uint Key) PickerHotkey
++    {
++        get { lock (_sync) {
++            var m = (uint)GetDouble(Settings, "PickerHotkeyModifiers", 2);
++            var k = (uint)GetDouble(Settings, "PickerHotkeyKey", 0xC0);
++            return (m, k) is (2, 0xC0) or (3, 0x56) or (3, 0x51) ? (m, k) : (2u, 0xC0u);
+         } }
+     }
+ 
+--- baseline/ClipShelf.Core/CrashReporter.cs
++++ 2.15.0/ClipShelf.Core/CrashReporter.cs
+@@ -76,7 +76,7 @@
+         var sb = new StringBuilder();
+         sb.AppendLine("CLIPSHELF RUNTIME CRASH - 把這個檔案傳給 ChatGPT");
+         sb.AppendLine("====================================================");
+-        sb.AppendLine("Version: v2.14.2");
++        sb.AppendLine("Version: v2.15.0");
+         sb.AppendLine("Component: ClipShelf.Core");
+         sb.AppendLine("Source: " + source);
+         sb.AppendLine("Startup stage: " + _stage);
+--- baseline/ClipShelf.Core/NativeMessageWindow.cs
++++ 2.15.0/ClipShelf.Core/NativeMessageWindow.cs
+@@ -19,7 +19,18 @@
+     {
+         CreateHandle(new CreateParams { Caption = "ClipShelf.Core.MessageWindow" });
+         AddClipboardFormatListener(Handle);
+-        RegisterHotKey(Handle, HOTKEY_ID, MOD_CONTROL, VK_OEM_3);
++
++    }
++
++    public bool HotkeyRegistered { get; private set; }
++    private uint _modifiers, _key;
++    public bool ConfigureHotkey(uint modifiers, uint key)
++    {
++        if (HotkeyRegistered && modifiers == _modifiers && key == _key) return true;
++        if (HotkeyRegistered) UnregisterHotKey(Handle, HOTKEY_ID);
++        _modifiers = modifiers; _key = key;
++        HotkeyRegistered = RegisterHotKey(Handle, HOTKEY_ID, modifiers | 0x4000, key); // MOD_NOREPEAT
++        return HotkeyRegistered;
+     }
+ 
+     protected override void WndProc(ref Message m)
+--- baseline/DEVELOPMENT_HISTORY.md
++++ 2.15.0/DEVELOPMENT_HISTORY.md
+@@ -1,3 +1,7 @@
++# 2.15.0 — independent Quick Picker and resident WPF
++
++Implemented from verified 2.14.2 source. Windows x64 build/package pass; 64 headless checks pass; 4 IPC tests blocked by host socket restrictions; native Windows UI, install/upgrade, paste, IME, DPI and resource/performance measurements remain UNVERIFIED. See validation/VERIFICATION.md. Core/WPF separation and fail-closed storage preserved.
++
+ # 2.14.2 — Editing / Focus / Scrolling Regression Repair (2026-10-09)
+ 
+ Baseline: delivered Drive v2.14.1 source and the user's 135.7-second Windows recording.
+--- baseline/Diagnostics/Measure-Wake.ps1
++++ 2.15.0/Diagnostics/Measure-Wake.ps1
+@@ -0,0 +1,67 @@
++param([int[]]$HiddenSeconds = @(0,60,600,1800), [int]$WarmCycles = 50,
++      [string]$CorePath = "$env:LOCALAPPDATA\Programs\ClipShelf\ClipShelf.exe")
++$ErrorActionPreference = 'Stop'
++# Windows-only, not executed in the Linux build environment. Never copies/pastes.
++# Run with the default Ctrl+tilde hotkey; do not interact during this measurement.
++Add-Type @'
++using System;
++using System.Runtime.InteropServices;
++public static class ClipShelfWakeProbe {
++ [DllImport("user32.dll")] static extern void keybd_event(byte vk,byte scan,uint flags,UIntPtr extra);
++ [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
++ public static void Toggle() {
++  foreach(int k in new[]{16,17,18,91,92}) if((GetAsyncKeyState(k)&0x8000)!=0) throw new Exception("Release physical modifier keys.");
++  keybd_event(17,0,0,UIntPtr.Zero); keybd_event(192,0,0,UIntPtr.Zero);
++  keybd_event(192,0,2,UIntPtr.Zero); keybd_event(17,0,2,UIntPtr.Zero);
++ }
++}
++'@
++$Dir = Join-Path $env:LOCALAPPDATA 'ClipShelf\diagnostics'
++$Csv = Join-Path $Dir 'picker-wake.csv'
++New-Item -ItemType Directory -Path $Dir -Force | Out-Null
++function LastWake {
++ if (Test-Path $Csv) { return (Get-Content -LiteralPath $Csv -Tail 1) }
++ return ''
++}
++function Wake([string]$Phase) {
++ $before = LastWake
++ [ClipShelfWakeProbe]::Toggle()
++ $limit = [Diagnostics.Stopwatch]::StartNew()
++ do { Start-Sleep -Milliseconds 20; $line = LastWake } while (($line -eq $before) -and ($limit.ElapsedMilliseconds -lt 10000))
++ if ($line -eq $before) { throw 'No wake record: verify hotkey registration and picker visibility.' }
++ $f = $line.Split(',')
++ $entry = [pscustomobject]@{ Phase=$Phase;Utc=$f[0];Version=$f[1];UiPid=[int]$f[2];WakeMs=[double]::Parse($f[3],[Globalization.CultureInfo]::InvariantCulture);WorkingSetBytes=[long]$f[4];PrivateBytes=[long]$f[5] }
++ Start-Sleep -Milliseconds 200
++ [ClipShelfWakeProbe]::Toggle() # Hide without touching the clipboard.
++ Start-Sleep -Milliseconds 200
++ return $entry
++}
++function Resources {
++ @(Get-Process ClipShelf,ClipShelf.UI -ErrorAction SilentlyContinue | ForEach-Object {
++  [pscustomobject]@{Name=$_.ProcessName;Pid=$_.Id;CpuSeconds=$_.CPU;WorkingSetBytes=$_.WorkingSet64;PrivateBytes=$_.PrivateMemorySize64}
++ })
++}
++$Rows = @()
++$StartedByProbe = -not (Get-Process ClipShelf -ErrorAction SilentlyContinue)
++if ($StartedByProbe) { Start-Process -FilePath $CorePath -ArgumentList '--background'; Start-Sleep -Seconds 3 }
++$Rows += Wake 'first-wake-after-background-start-or-existing-process'
++foreach ($seconds in $HiddenSeconds) {
++ Write-Host "Hidden for $seconds seconds..."
++ Start-Sleep -Seconds $seconds
++ $Rows += Wake "hidden-$seconds-seconds"
++}
++for ($i=0;$i -lt $WarmCycles;$i++) { $Rows += Wake 'warm-repeat' }
++$Before = Resources
++$IdleWatch = [Diagnostics.Stopwatch]::StartNew()
++Start-Sleep -Seconds 10
++$After = Resources
++$Idle = @($After | ForEach-Object {
++ $p = $_; $b = $Before | Where-Object Pid -eq $p.Pid
++ [pscustomobject]@{Name=$p.Name;Pid=$p.Pid;SameProcess=[bool]$b;WorkingSetBytes=$p.WorkingSetBytes;PrivateBytes=$p.PrivateBytes;CpuPercentOneLogicalCore= $(if($b){100*($p.CpuSeconds-$b.CpuSeconds)/$IdleWatch.Elapsed.TotalSeconds}else{$null})}
++})
++$Warm = @($Rows | Where-Object Phase -eq 'warm-repeat' | Sort-Object WakeMs)
++$P95 = if ($Warm.Count) { $Warm[[Math]::Ceiling(.95*$Warm.Count)-1].WakeMs } else { $null }
++$Report = [ordered]@{Version='2.15.0';StartedByProbe=$StartedByProbe;Scope='Core hotkey timestamp to WPF ContextIdle, includes IPC, not first-pixel paint';WarmP95Ms=$P95;Target250Ms=$(if($null -ne $P95){$P95 -lt 250}else{$null});StableUiPid=(@($Rows.UiPid | Select-Object -Unique).Count -eq 1);Idle=$Idle;Wakes=$Rows;NativePasteImeDpi='NOT_TESTED_BY_THIS_SCRIPT'}
++$Path = Join-Path $Dir ('wake-report-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.json')
++$Report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $Path -Encoding UTF8
++Write-Host "Report: $Path"
+--- baseline/README.txt
++++ 2.15.0/README.txt
+@@ -1,46 +1,58 @@
+-ClipShelf 2.14.2 — 安裝版
++ClipShelf 2.15.0 — 雙模式剪貼簿 Windows x64 候選交付版
+ 
+ 安裝與更新
+-Windows 10/11 64 位元。執行 ClipShelf-2.14.2-Setup.exe 即可，不需安裝 .NET 或自行編譯。
+-安裝前先從右下角系統匣的 ClipShelf 選單「退出」舊版；只關閉管理視窗不等於退出。
+-日後更新同樣執行新版安裝包，不必先解除安裝。
+-程式安裝到目前使用者的 %LOCALAPPDATA%\Programs\ClipShelf。
+-資料繼續放在 %LOCALAPPDATA%\ClipShelf，安裝更新與解除安裝均不清除個人資料。
+-建議第一次升級前，在舊版做一次「完整備份」。
+-此包尚未使用付費程式碼簽章；Windows 可能顯示發行者未知。
++Windows 10/11 64 位元。執行 ClipShelf-2.15.0-Setup.exe，不需另外安裝 .NET。
++更新前先從右下角系統匣「離開 ClipShelf」退出舊版，再安裝；只關閉視窗不等於退出。
++可直接原地升級，不必先解除安裝。建議升級前先在舊版做一次完整備份。
++程式：%LOCALAPPDATA%\Programs\ClipShelf；個人資料：%LOCALAPPDATA%\ClipShelf。
++安裝與解除安裝不清除個人資料。此包未簽章，Windows 可能顯示發行者未知。
+ 
+-使用方式
+-主視窗「A 標準／B 緊湊」可直接切換卡片密度，保留最後設定。
+-正文右上小鉛筆、更多／右鍵「編輯文字」在原區域修改，也可選取後 Delete、直接輸入或貼上。
+-編輯狀態與儲存／取消列在正文上方；Enter 換行、Ctrl+Enter 儲存、Esc 取消。
+-普通單擊文字複製，不展開／重排目前畫面；全文預覽在更多選單。正文不再彈空字串提示。
+-標題旁鉛筆或右鍵「重新命名標題」：Enter 儲存、Esc 取消，清空名稱恢復自動摘要。
+-安裝後可由桌面／開始功能表開啟。Ctrl+~ 呼叫管理介面。
+-「檢視 / 工具」可切換全庫搜尋／目前分類搜尋、精簡檢視、閱讀視窗及暫停擷取。
+-搜尋以空白分隔多個關鍵字，所有關鍵字都符合才顯示。
+-MD／TXT 附件可搜尋內容（單檔上限 16 MiB）；其他檔案仍可用檔名搜尋。
+-編輯文字時可填標題與備註；未填標題就顯示內容摘要，不強調來源出處。
+-Ctrl／Shift 多選後可批次收藏、移動分类，或將文字重新排序並合併複製。
+-閱讀視窗可調字級、搜尋高亮、匯出 TXT／MD。
+-文字中的 {{欄位名稱}} 可在範本填寫視窗填值後複製，保留原始範本。
++快捷選取模式
++Ctrl+~（Ctrl 加反引號／波浪鍵，不必按 Shift）開啟／收合獨立的小視窗。
++預設約 440 × 570，約十筆紧湊摘要；拖動標題列移動、邊框調整大小，記住位置與尺寸。
++直接輸入搜尋；空白分隔關鍵字，所有關鍵字皆需符合。搜尋文字、標題、備註、來源及檔名。
++↑／↓ 選取；Enter 貼上並收合；Esc 只收合；Ctrl+C 只複製，不送出貼上。
++Shift+Enter 對文字送出純文字貼上。ClipShelf 現有文字歷史本來就只保存純文字，兩者結果相同。
++單擊只選取；雙擊列才貼上；F3 開啟全文預覽；圖片有縮圖、檔案有類型摘要。
++一次最多顯示 1000 個搜尋結果；搜尋仍涵蓋全部有效最近紀錄。清單採虛擬化，非建立整庫卡片。
++視窗開啟期間保留排序；新擷取紀錄加在尾端，重新開啟時再按最近使用排序。
++開啟前的外部視窗會作為貼上目標；內容寫入剪貼簿後恢復其焦點，再送出 Ctrl+V。
++請先放開快捷鍵／Shift。目標已關閉、焦點被 Windows 拒絕或權限不一致時，顯示原因；可 Ctrl+C 後手動貼上。
++Windows 接收鍵盤輸入不代表每個應用程式必定接受貼上；編輯位置及目標程式行為需實機確認。
+ 
+-資料保護
+-無法讀取既有資料時會停止載入，不將它當成空白資料覆蓋。
+-正常儲存保留上一份資料與每小時歷史快照；背景建立可由一般匯入功能讀取的自動備份。
+-自動備份保留最近 14 份；包含文字、分類及可讀取的檔案／圖片附件。
+-外部資料夾不會由自動備份遞迴打包；需要完整資料夾內容時請使用手動完整備份。
+-備份與原始資料在同一部電腦，重要內容請再將手動備份另存其他磁碟。
+-「檢視 / 工具」可開啟自動備份資料夾，STATUS.txt 記錄結果與略過項目。
++完整管理模式
++快捷視窗右上「完整管理」；系統匣與桌面浮動圖示右鍵也有「開啟完整管理」。
++完整管理左上「快捷選取」立即切换到小視窗；浮動圖示左鍵預設開啟快捷選取。
++管理模式原有 A 標準／B 緊湊卡片密度切換仍獨立存在，不是兩種工作模式的切換。
++保留歷史、收藏、資料夾、分類、搜尋、多選、編輯文字、標題、局部複製及原有備份／匯入。
++正文鉛筆進入原地編輯：Enter 換行、Ctrl+Enter 儲存、Esc 取消。
++標題鉛筆：Enter 儲存、Esc 取消；清空名稱回到自動摘要。
++切到快捷視窗不重設管理視窗選取、捲動、A/B 檢視或編輯草稿。
++「視窗切換模式」仍控制工作列／Alt+Tab／不干擾行為，與雙模式用途分開。
+ 
+-這次驗證
+-已完成 Windows x64 自含執行環境編譯，原有 36 項加本次 4 項資料／模型綁定檢查共 40 項通過。
+-安裝包由 NSIS 3.09 生成並逐檔核對封裝。原生安裝與升級尚未實機驗證。
+-完整驗證結果見 validation/VERIFICATION.md。
+-Windows 真實桌面操作、中文輸入法、快捷鍵與高 DPI 的最終體驗，仍需實機確認。
+-本環境 Wine 因 socket 限制無法啟動；不把舊版 Wine 驗證視為新版通過。
++快捷鍵衝突
++若 Ditto 或其他程式佔用 Ctrl+~，系統匣會提示註冊失敗。
++右鍵系統匣 → 完整管理 → 設定，可改用 Ctrl+Alt+V 或 Ctrl+Alt+Q；同樣檢查註冊結果。
++不註冊 Ctrl+Shift+F8，也不自動搶奪其他程式的快捷鍵。
+ 
+-以後修改功能
+-原始碼包保留 Core／WPF 分離結構。修改後先執行 BUILD_EXE.cmd，再執行 BUILD_SETUP.cmd。
+-開發電腦需 .NET 8 SDK 及 NSIS 3.x；一般使用者只需要安裝包。
+-BUILD_EXE.cmd 產生 ClipShelf_READY；BUILD_SETUP.cmd 由這份輸出生成安裝檔。
+-免安裝包需要整個資料夾一起解壓縮，不能只取出一個 EXE；資料位置仍同上。
++常駐與資料保護
++Core 與 WPF 仍為兩個程序；WPF 初始化後隱藏常駐，不再於 45 秒／300 秒退出。
++快捷視窗在第一次使用時初始化，後續重用；長時間隱藏不應重新冷啟動 WPF。
++隱藏時略過重複附件全文掃描，無新增滑鼠輪詢或全域低階滑鼠 Hook。
++真正退出會先檢查儲存及草稿；保存失敗時取消退出，不強殺程序。
++沿用既有 fail-closed 載入：無法確定 history.json 狀態時停止載入，不能當成空白覆寫。
++內部複製使用剪貼簿序號識別，避免自家寫入再成為重複歷史。
++Safe Delete／復原／永久刪除及匯入 merge 語義保留。OCR 已移除，不重新加入。
++
++驗證狀態
++Windows x64 自含執行環境建置及 NSIS 封裝已完成；64 項模型／資料自動化檢查通過。
++4 項實際 IPC 自動化測試被 Linux host 的 socket 權限阻擋，尚未通過實際傳輸驗證。
++Windows 原生安裝／升級、Edge／Notepad++／Obsidian 貼上、IME、DPI、多螢幕、浮動選單點外關閉仍待實機確認。
++常駐 CPU、記憶體、1／10／30 分鐘喚醒延遲尚未測量；不能宣稱已達暖機 P95 <250ms。
++程式將 Core 熱鍵請求到 WPF ContextIdle 的耗時記錄於 %LOCALAPPDATA%\ClipShelf\diagnostics\picker-wake.csv。
++原始碼包 Diagnostics\Measure-Wake.ps1 可在 Windows 執行重複熱鍵、1／10／30 分鐘隱藏及資源採樣；本輪未執行。
++完整測試邊界與回退方法見更新說明及版本交付清單。
++
++再次建置
++開發電腦需 .NET 8 SDK 與 NSIS 3.x；執行 BUILD_EXE.cmd，再 BUILD_SETUP.cmd。
++Source 包保留完整歷史工程文件；validation\baseline-2.14.2 為舊版證據，不可當成 2.15.0 測試結果。
+--- baseline/README_BUILD.txt
++++ 2.15.0/README_BUILD.txt
+@@ -1,8 +1,8 @@
+-ClipShelf 2.14.2 Windows x64
++ClipShelf 2.15.0 Windows x64
+ 1. 安裝 .NET 8 SDK。
+ 2. 執行 BUILD_EXE.cmd，成功輸出 ClipShelf_READY（含執行環境）。
+ 3. 安裝 NSIS 3.x。
+-4. 執行 BUILD_SETUP.cmd，成功輸出 ClipShelf-2.14.2-Setup.exe。
++4. 執行 BUILD_SETUP.cmd，成功輸出 ClipShelf-2.15.0-Setup.exe。
+ 5. 安裝前由系統匣退出舊版；更新不須先解除安裝。
+ 
+ 資料測試：dotnet run --project Tests/Tests.csproj -c Release
+--- baseline/README_v2.15.0.txt
++++ 2.15.0/README_v2.15.0.txt
+@@ -0,0 +1,58 @@
++ClipShelf 2.15.0 — 雙模式剪貼簿 Windows x64 候選交付版
++
++安裝與更新
++Windows 10/11 64 位元。執行 ClipShelf-2.15.0-Setup.exe，不需另外安裝 .NET。
++更新前先從右下角系統匣「離開 ClipShelf」退出舊版，再安裝；只關閉視窗不等於退出。
++可直接原地升級，不必先解除安裝。建議升級前先在舊版做一次完整備份。
++程式：%LOCALAPPDATA%\Programs\ClipShelf；個人資料：%LOCALAPPDATA%\ClipShelf。
++安裝與解除安裝不清除個人資料。此包未簽章，Windows 可能顯示發行者未知。
++
++快捷選取模式
++Ctrl+~（Ctrl 加反引號／波浪鍵，不必按 Shift）開啟／收合獨立的小視窗。
++預設約 440 × 570，約十筆紧湊摘要；拖動標題列移動、邊框調整大小，記住位置與尺寸。
++直接輸入搜尋；空白分隔關鍵字，所有關鍵字皆需符合。搜尋文字、標題、備註、來源及檔名。
++↑／↓ 選取；Enter 貼上並收合；Esc 只收合；Ctrl+C 只複製，不送出貼上。
++Shift+Enter 對文字送出純文字貼上。ClipShelf 現有文字歷史本來就只保存純文字，兩者結果相同。
++單擊只選取；雙擊列才貼上；F3 開啟全文預覽；圖片有縮圖、檔案有類型摘要。
++一次最多顯示 1000 個搜尋結果；搜尋仍涵蓋全部有效最近紀錄。清單採虛擬化，非建立整庫卡片。
++視窗開啟期間保留排序；新擷取紀錄加在尾端，重新開啟時再按最近使用排序。
++開啟前的外部視窗會作為貼上目標；內容寫入剪貼簿後恢復其焦點，再送出 Ctrl+V。
++請先放開快捷鍵／Shift。目標已關閉、焦點被 Windows 拒絕或權限不一致時，顯示原因；可 Ctrl+C 後手動貼上。
++Windows 接收鍵盤輸入不代表每個應用程式必定接受貼上；編輯位置及目標程式行為需實機確認。
++
++完整管理模式
++快捷視窗右上「完整管理」；系統匣與桌面浮動圖示右鍵也有「開啟完整管理」。
++完整管理左上「快捷選取」立即切换到小視窗；浮動圖示左鍵預設開啟快捷選取。
++管理模式原有 A 標準／B 緊湊卡片密度切換仍獨立存在，不是兩種工作模式的切換。
++保留歷史、收藏、資料夾、分類、搜尋、多選、編輯文字、標題、局部複製及原有備份／匯入。
++正文鉛筆進入原地編輯：Enter 換行、Ctrl+Enter 儲存、Esc 取消。
++標題鉛筆：Enter 儲存、Esc 取消；清空名稱回到自動摘要。
++切到快捷視窗不重設管理視窗選取、捲動、A/B 檢視或編輯草稿。
++「視窗切換模式」仍控制工作列／Alt+Tab／不干擾行為，與雙模式用途分開。
++
++快捷鍵衝突
++若 Ditto 或其他程式佔用 Ctrl+~，系統匣會提示註冊失敗。
++右鍵系統匣 → 完整管理 → 設定，可改用 Ctrl+Alt+V 或 Ctrl+Alt+Q；同樣檢查註冊結果。
++不註冊 Ctrl+Shift+F8，也不自動搶奪其他程式的快捷鍵。
++
++常駐與資料保護
++Core 與 WPF 仍為兩個程序；WPF 初始化後隱藏常駐，不再於 45 秒／300 秒退出。
++快捷視窗在第一次使用時初始化，後續重用；長時間隱藏不應重新冷啟動 WPF。
++隱藏時略過重複附件全文掃描，無新增滑鼠輪詢或全域低階滑鼠 Hook。
++真正退出會先檢查儲存及草稿；保存失敗時取消退出，不強殺程序。
++沿用既有 fail-closed 載入：無法確定 history.json 狀態時停止載入，不能當成空白覆寫。
++內部複製使用剪貼簿序號識別，避免自家寫入再成為重複歷史。
++Safe Delete／復原／永久刪除及匯入 merge 語義保留。OCR 已移除，不重新加入。
++
++驗證狀態
++Windows x64 自含執行環境建置及 NSIS 封裝已完成；64 項模型／資料自動化檢查通過。
++4 項實際 IPC 自動化測試被 Linux host 的 socket 權限阻擋，尚未通過實際傳輸驗證。
++Windows 原生安裝／升級、Edge／Notepad++／Obsidian 貼上、IME、DPI、多螢幕、浮動選單點外關閉仍待實機確認。
++常駐 CPU、記憶體、1／10／30 分鐘喚醒延遲尚未測量；不能宣稱已達暖機 P95 <250ms。
++程式將 Core 熱鍵請求到 WPF ContextIdle 的耗時記錄於 %LOCALAPPDATA%\ClipShelf\diagnostics\picker-wake.csv。
++原始碼包 Diagnostics\Measure-Wake.ps1 可在 Windows 執行重複熱鍵、1／10／30 分鐘隱藏及資源採樣；本輪未執行。
++完整測試邊界與回退方法見更新說明及版本交付清單。
++
++再次建置
++開發電腦需 .NET 8 SDK 與 NSIS 3.x；執行 BUILD_EXE.cmd，再 BUILD_SETUP.cmd。
++Source 包保留完整歷史工程文件；validation\baseline-2.14.2 為舊版證據，不可當成 2.15.0 測試結果。
+--- baseline/Shared/UiChannel.cs
++++ 2.15.0/Shared/UiChannel.cs
+@@ -0,0 +1,65 @@
++using System;
++using System.Diagnostics;
++using System.IO;
++using System.IO.Pipes;
++using System.Text.Json;
++using System.Threading;
++using System.Threading.Tasks;
++
++namespace ClipShelfShared;
++
++internal sealed record UiRequest(string Command, long Target = 0, int TargetPid = 0, long Started = 0, int Left = 0, int Top = 0, string? Message = null);
++
++// One bounded, authenticated transport. Every request carries its own target; no
++// shared target file or clipboard is used for the hand-off.
++internal static class UiChannel
++{
++    public static string Name => "ClipShelf.UI." + (OperatingSystem.IsWindows() ? SessionId() : Environment.ProcessId);
++    private static int SessionId() { using var process = Process.GetCurrentProcess(); return process.SessionId; }
++    public static async Task SendAsync(UiRequest request, CancellationToken cancellationToken = default)
++    {
++        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
++        timeout.CancelAfter(5000);
++        using var pipe = new NamedPipeClientStream(".", Name, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
++        await pipe.ConnectAsync(timeout.Token);
++        using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
++        using var reader = new StreamReader(pipe, leaveOpen: true);
++        await writer.WriteLineAsync(JsonSerializer.Serialize(request).AsMemory(), timeout.Token);
++        var reply = await reader.ReadLineAsync(timeout.Token);
++        if (reply != "OK") throw new IOException(reply ?? "介面沒有回應");
++    }
++}
++
++internal sealed class UiServer : IDisposable
++{
++    private readonly CancellationTokenSource _stop = new();
++    public UiServer(Func<UiRequest, Task> handler) => _ = Run(handler);
++    private async Task Run(Func<UiRequest, Task> handler)
++    {
++        while (!_stop.IsCancellationRequested)
++        {
++            try
++            {
++                using var pipe = new NamedPipeServerStream(UiChannel.Name, PipeDirection.InOut, 1,
++                    PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
++                await pipe.WaitForConnectionAsync(_stop.Token);
++                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
++                timeout.CancelAfter(5000);
++                using var reader = new StreamReader(pipe, leaveOpen: true);
++                using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
++                var line = await reader.ReadLineAsync(timeout.Token);
++                if (line == null || line.Length > 4096) continue;
++                try
++                {
++                    var request = JsonSerializer.Deserialize<UiRequest>(line) ?? throw new InvalidDataException();
++                    await handler(request);
++                    await writer.WriteLineAsync("OK");
++                }
++                catch (Exception ex) { await writer.WriteLineAsync("ERROR: " + ex.Message); }
++            }
++            catch (OperationCanceledException) { }
++            catch (IOException) { }
++        }
++    }
++    public void Dispose() => _stop.Cancel();
++}
+--- baseline/Tests/Program.cs
++++ 2.15.0/Tests/Program.cs
+@@ -115,5 +115,75 @@
+     Check(edit.DraftText=="刪除後剩餘文字" && edit.Text==nativeDraftOriginal && !JsonSerializer.Serialize(edit).Contains("IsTextReadOnly"),"native edit binding stores a draft without changing or serializing the original body");
+     edit.EditorText=nativeDraftOriginal;edit.IsEditingText=false;
+     Check(edit.IsTextReadOnly && edit.EditorText==nativeDraftOriginal && edit.Text==nativeDraftOriginal,"ending editing restores read-only content and original body");
+-    Console.WriteLine($"ALL {checks} CHECKS PASSED");
++    var pickerItems = new[] {
++        new ClipItem { Text="第一筆 Alpha 中文", Title="手動標題", HistoryVisible=true, LastUsedAt=DateTime.Now },
++        new ClipItem { Text="第二筆 beta", HistoryVisible=true, LastUsedAt=DateTime.Now.AddMinutes(-1), DraftText="管理草稿", IsEditingText=true, IsMarked=true, Compact=true },
++        new ClipItem { Kind="Files", Files=new(){"C:/資料/說明.md"}, HistoryVisible=true, LastUsedAt=DateTime.Now.AddMinutes(-2) },
++        new ClipItem { Kind="Image", ImagePath="image.png", HistoryVisible=true, LastUsedAt=DateTime.Now.AddMinutes(-3) },
++        new ClipItem { Text="已刪除", HistoryVisible=true, IsDeleted=true },
++        new ClipItem { Text="待清除", HistoryVisible=true, IsPendingPurge=true },
++        new ClipItem { Text="純分類", HistoryVisible=false }
++    };
++    var picker = new QuickPickerModel(); picker.Open(pickerItems);
++    Check(picker.Search("").Count==4, "picker uses real recent history and excludes deleted/pending/non-history records");
++    Check(picker.Search("").First().Id==pickerItems[0].Id, "picker opens newest first");
++    Check(picker.Search("ALPHA 中文").Single().Id==pickerItems[0].Id, "picker multilingual case-insensitive AND search");
++    Check(picker.Search("手動標題").Single().Id==pickerItems[0].Id, "picker custom title searchable");
++    Check(picker.Search("說明.md").Single().Kind=="Files", "picker file paths searchable");
++    Check(picker.Search("未存在").Count==0, "picker empty search results are safe");
++    var orderBefore=picker.Search("").Select(x=>x.Id).ToArray();
++    pickerItems[1].LastUsedAt=DateTime.Now.AddMinutes(2);pickerItems[1].UseCount++;
++    picker.Synchronize(pickerItems);
++    Check(picker.Search("").Select(x=>x.Id).SequenceEqual(orderBefore), "usage updates do not reorder an open picker");
++    Check(pickerItems[1].DraftText=="管理草稿" && pickerItems[1].IsEditingText && pickerItems[1].IsMarked && pickerItems[1].Compact, "picker navigation and search preserve manager drafts, selection and A/B state");
++    var incomingPicker = new ClipItem { Text="新擷取",HistoryVisible=true,LastUsedAt=DateTime.Now.AddMinutes(3) };
++    picker.Synchronize(pickerItems.Append(incomingPicker));
++    Check(picker.Search("").Last().Id==incomingPicker.Id && picker.Search("").Take(4).Select(x=>x.Id).SequenceEqual(orderBefore), "live capture appended without moving existing selected rows");
++    pickerItems[0].IsDeleted=true;picker.Synchronize(pickerItems.Append(incomingPicker));
++    Check(!picker.Search("").Any(x=>x.Id==pickerItems[0].Id), "live deletion removes unavailable picker row");
++    picker.Open(pickerItems.Append(incomingPicker));
++    Check(picker.Search("").First().Id==incomingPicker.Id, "reopen refreshes recent ordering");
++    var many=Enumerable.Range(0,12000).Select(i=>new ClipItem {Text="entry "+i,HistoryVisible=true}).ToList();picker.Open(many);
++    Check(picker.Search("").Count==1000, "large history projection bounded at 1000 results");
++    Check(picker.Search("entry 11999").Single().Text=="entry 11999", "search reaches records beyond displayed projection");
++    var session=new PickerSession();
++    Check(!session.TryBeginPaste(), "hidden picker cannot paste");session.Open(123,456);
++    Check(session.Target==123 && session.TargetPid==456 && session.Visible, "session retains original target with process identity");
++    Check(session.TryBeginPaste() && !session.TryBeginPaste(), "repeated Enter cannot start duplicate paste");
++    session.EndPaste();session.Hide();
++    Check(!session.Visible && !session.TryBeginPaste(), "Esc/hide invalidates paste entry without clipboard operation");
++    session.Open(789,321);Check(session.Target==789 && session.TargetPid==321 && session.TryBeginPaste(),"reopen accepts a fresh target after previous paste");session.EndPaste();
++    var pickerSettings=new AppSettings {PickerWidth=456,PickerHeight=601,PickerLeft=-200,PickerTop=40,HasPickerPlacement=true,PickerHotkeyModifiers=3,PickerHotkeyKey=86,CompactView=true};
++    var pickerClone=JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(pickerSettings.Clone()))!;
++    Check(pickerClone.PickerWidth==456 && pickerClone.PickerHeight==601 && pickerClone.PickerLeft==-200 && pickerClone.HasPickerPlacement && pickerClone.CompactView,"picker geometry persisted alongside unchanged A/B setting");
++    Check(pickerClone.PickerHotkeyModifiers==3 && pickerClone.PickerHotkeyKey==86,"alternative global hotkey survives clone and serialization");
++    Check(new AppSettings().PickerHotkeyKey==0xC0 && new AppSettings().PickerHotkeyModifiers==2,"legacy settings acquire Ctrl+tilde without Ctrl+Shift+F8");
++    SafeState.Write(path,State(new[]{new ClipItem {Text="不能丟失",HistoryVisible=true}},pickerSettings));store.Reload();
++    Check(store.PickerHotkey==(3u,86u),"Core uses persisted WPF hotkey source of truth");
++    store.SetBubblePlacement(20,40);
++    var currentSettings=JsonNode.Parse(File.ReadAllText(path))!["Settings"]!;
++    Check(currentSettings["PickerWidth"]!.GetValue<double>()==456 && currentSettings["PickerHotkeyKey"]!.GetValue<int>()==86,"Core setting update preserves picker fields and history");
++    pickerSettings.PickerHotkeyModifiers=6;pickerSettings.PickerHotkeyKey=119;
++    SafeState.Write(path,State(Array.Empty<ClipItem>(),pickerSettings));store.Reload();
++    Check(store.PickerHotkey==(2u,0xC0u),"Core rejects prohibited Ctrl+Shift+F8 setting and restores default");
++    // Actual named-pipe boundary, using the production client/server (not a mock).
++    var requests=new List<UiRequest>();
++    try {
++    using(var server=new UiServer(request=>{
++        if(request.Command=="reject")throw new InvalidOperationException("rejected");
++        requests.Add(request);return Task.CompletedTask;
++    })) {
++        await UiChannel.SendAsync(new UiRequest("quick",1234,77,99));
++        Check(requests.Count==1 && requests[0].Target==1234 && requests[0].TargetPid==77 && requests[0].Started==99,"production IPC delivers exact original target and timestamp once");
++        await UiChannel.SendAsync(new UiRequest("manage",5678,88));
++        Check(requests.Select(x=>x.Command).SequenceEqual(new[]{"quick","manage"}),"IPC preserves sequential window switch command order");
++        bool ipcRejected=false;try{await UiChannel.SendAsync(new UiRequest("reject"));}catch(IOException){ipcRejected=true;}
++        Check(ipcRejected && requests.Count==2,"failed IPC command returns failure rather than success");
++        await UiChannel.SendAsync(new UiRequest("bubble-placement",Left:-100,Top:60));
++        Check(requests.Last().Left==-100 && requests.Last().Top==60,"bubble placement handed to sole UI state writer");
++    }
++    } catch (System.Net.Sockets.SocketException ex) when (!OperatingSystem.IsWindows()) {
++        Console.WriteLine("UNVERIFIED: 4 production IPC checks blocked by host socket permission: "+ex.SocketErrorCode);
++    }
++    Console.WriteLine($"PASSED {checks} CHECKS; runtime/blocked checks reported separately above");
+ } finally { Directory.Delete(root,true); }
+--- baseline/Tests/Tests.csproj
++++ 2.15.0/Tests/Tests.csproj
+@@ -4,7 +4,7 @@
+ <Compile Include="../Shared/*.cs" />
+ <Compile Include="../ClipShelf.Core/CoreStateStore.cs" />
+ <Compile Include="../ClipShelf/ClipItem.cs" />
+-<Compile Include="../ClipShelf/ClipEditing.cs" />
++<Compile Include="../ClipShelf/ClipEditing.cs" /><Compile Include="../ClipShelf/QuickPickerModel.cs" />
+ <Compile Include="../ClipShelf/AppSettings.cs" />
+ <Compile Include="../ClipShelf/BackupService.cs" />
+ </ItemGroup>
+--- baseline/installer/ClipShelf.nsi
++++ 2.15.0/installer/ClipShelf.nsi
+@@ -5,7 +5,7 @@
+ !include "x64.nsh"
+ Name "ClipShelf 剪貼庫"
+ !ifndef OUTPUT_FILE
+-!define OUTPUT_FILE "../../deliverables/ClipShelf-2.14.2-Setup.exe"
++!define OUTPUT_FILE "../../deliverables/ClipShelf-2.15.0-Setup.exe"
+ !endif
+ !ifndef PAYLOAD_DIR
+ !define PAYLOAD_DIR "../release"
+@@ -16,11 +16,11 @@
+ RequestExecutionLevel user
+ SetCompressor /SOLID lzma
+ BrandingText "ClipShelf · 本機剪貼庫"
+-VIProductVersion "2.14.2.0"
++VIProductVersion "2.15.0.0"
+ VIAddVersionKey /LANG=1028 "ProductName" "ClipShelf"
+ VIAddVersionKey /LANG=1028 "FileDescription" "ClipShelf Setup"
+-VIAddVersionKey /LANG=1028 "FileVersion" "2.14.2.0"
+-VIAddVersionKey /LANG=1028 "ProductVersion" "2.14.2"
++VIAddVersionKey /LANG=1028 "FileVersion" "2.15.0.0"
++VIAddVersionKey /LANG=1028 "ProductVersion" "2.15.0"
+ VIAddVersionKey /LANG=1028 "LegalCopyright" "ClipShelf"
+ !define MUI_ICON "../ClipShelf/clipshelf.ico"
+ !define MUI_UNICON "../ClipShelf/clipshelf.ico"
+@@ -86,9 +86,9 @@
+   CreateShortcut "$SMPROGRAMS\ClipShelf\ClipShelf.lnk" "$INSTDIR\ClipShelf.exe"
+   CreateShortcut "$SMPROGRAMS\ClipShelf\解除安裝.lnk" "$INSTDIR\Uninstall.exe"
+   WriteRegStr HKCU "Software\ClipShelf\Installer" "Path" "$INSTDIR"
+-  WriteRegStr HKCU "Software\ClipShelf\Installer" "Version" "2.14.2"
++  WriteRegStr HKCU "Software\ClipShelf\Installer" "Version" "2.15.0"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayName" "ClipShelf 剪貼庫"
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayVersion" "2.14.2"
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayVersion" "2.15.0"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayIcon" "$INSTDIR\ClipShelf.exe"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "InstallLocation" "$INSTDIR"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'

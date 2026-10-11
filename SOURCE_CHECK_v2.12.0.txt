@@ -1,0 +1,25 @@
+ClipShelf v2.12.0 source check
+
+baseline: v2.11.0 OCR Removed + Fast Hotkey Wake
+history.json schema: UNCHANGED
+Ctrl+~ warm standby: RETAINED
+OCR active code: STILL REMOVED
+Backup/import preview + content dedup: RETAINED
+Safe Delete lifecycle: RETAINED
+
+Windows-style card multiselect:
+- selectable TextBox excluded from card selection: YES
+- Ctrl toggles individual card: YES
+- Shift selects anchored range: YES
+- Ctrl+Shift adds range: YES
+- Ctrl/Shift can auto-enter multiselect without toolbar button: YES
+- marked cards have visual highlight: YES
+
+Rapid delete safety:
+- ListBox MouseDoubleClick rejects Button/CheckBox origins: YES
+- delete action arms 750 ms double-click suppression window: YES
+- adjacent copy/favorite/more actions are ignored inside that guard window: YES
+- rapid delete itself remains available (no delete cooldown): YES
+- PasteItemAsync / CloseForTrueHide path otherwise retained for genuine card double-click: YES
+
+Windows build/runtime remains user-authoritative.

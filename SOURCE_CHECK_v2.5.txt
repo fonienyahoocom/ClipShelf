@@ -1,0 +1,23 @@
+ClipShelf v2.5 source check
+===========================
+
+Base: user-provided ClipShelf v2.4 sidebar/modefix source.
+
+Static checks completed in the generation environment:
+- MainWindow.xaml and all project XAML files parse as valid XML.
+- All event-handler names referenced by MainWindow.xaml exist in MainWindow.xaml.cs.
+- Modified C# files have balanced brace structure.
+- Core + UI history semantics were updated together (not UI-only), so background clipboard capture also sets HistoryVisible.
+- v2.4 -> v2.5 history migration is implemented in both UI settings model and Core JSON store.
+- No new background polling, network requests, or permanent timers were added.
+
+Environment limitation:
+- This environment does not contain the Windows .NET 8 / WPF SDK, so the final Windows build/runtime test must be done with BUILD_EXE.cmd on Windows.
+
+Recommended first regression checks:
+1. Start v2.5 and confirm old folders/history remain.
+2. Copy one item from prompt/占星技巧 -> open History -> it should appear there.
+3. Delete that History entry -> original folder item must remain.
+4. Select part of a saved text item and Ctrl+C -> selected fragment should appear in History; original full item stays unchanged.
+5. Move a fresh History item into a classification folder -> it should leave History; copy it later -> it should reappear in History.
+6. Verify normal/non-interference mode, bubble/tray switching, and Exit lifecycle still match v2.4.

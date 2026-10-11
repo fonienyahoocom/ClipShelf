@@ -1,0 +1,19 @@
+ClipShelf v2.5.2 source-level check
+===================================
+
+Requested scope only:
+1. Mouse-only selection can continue beyond the visible viewport.
+2. Expanded text can collapse by clicking the right-side blank area.
+3. Mouse-wheel speed is reduced while expanded text is open.
+
+Checks performed in this environment:
+- All XAML and csproj XML parsed successfully.
+- All MainWindow XAML event handlers resolve to methods in MainWindow.xaml.cs.
+- C# source has balanced braces (coarse structural check).
+- Core/history safety model from v2.5.1 was not changed.
+- No new permanent polling/background loop was introduced.
+- Selection auto-scroll DispatcherTimer runs only during an active edge drag.
+- Recycling virtualization remains enabled; History uses pixel scroll units.
+
+Limit:
+- This environment does not contain the Windows .NET/WPF SDK, so final Windows build/runtime verification still must occur on the user's PC via BUILD_EXE.cmd.

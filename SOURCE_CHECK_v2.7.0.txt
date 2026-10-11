@@ -1,0 +1,21 @@
+﻿ClipShelf v2.7.0 source check
+=============================
+Base: v2.6.6 Build Harness 2
+
+Safe-delete implementation present:
+- ClipItem has IsDeleted / DeletedAt / IsPendingPurge / PendingPurgeAt persisted state.
+- Main active surfaces exclude deleted/pending-purge items.
+- Fixed 最近刪除 sidebar surface shows soft-deleted records.
+- Restore clears delete state and preserves existing placement metadata; unreachable items fall back to History.
+- Normal views use soft-delete; permanent delete is restricted to 最近刪除.
+- Permanent delete has confirmation + 8-second deferred physical purge + undo snackbar.
+- Pending purge timestamps persist and resume/finalize on next UI startup.
+- Managed image/file payload is retained during soft-delete and deleted only in PurgeItemNow.
+- Settings include 7/30/90/never retention; startup/settings-change cleanup only, no permanent polling.
+- Multi-select Restore / Permanent Delete and drag-to-trash are implemented.
+- Existing History recent-use semantics and Core/UI low-resource split were not intentionally changed.
+- TextProbe remains optional and non-blocking in Build Harness 2.
+
+Validation limitation:
+- XML structure was checked for MainWindow.xaml and SettingsDialog.xaml.
+- This environment does not provide dotnet/Windows WPF compilation, so Windows BUILD SUCCESS is still required before calling v2.7.0 runtime-verified.

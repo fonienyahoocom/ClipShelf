@@ -1,0 +1,24 @@
+<Window x:Class="ClipShelf.CategoryDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="分類" Width="390" Height="205" WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize" Background="#F8FAFC">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="14"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Text="把這筆內容放到哪個分類？" FontSize="15"/>
+        <ComboBox x:Name="CategoryBox" Grid.Row="2" Height="34" FontSize="14"/>
+        <CheckBox x:Name="ClearBox" Grid.Row="4" Content="移除既有分類"/>
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Width="78" Height="32" Margin="0,0,8,0" Content="取消" Click="Cancel_Click"/>
+            <Button Width="78" Height="32" Content="確定" IsDefault="True" Click="Ok_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

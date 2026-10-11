@@ -1,0 +1,12 @@
+ClipShelf v2.5.3 source-level check
+
+PASS: MainWindow.xaml parses as XML.
+PASS: UI/Core csproj parse as XML.
+PASS: all referenced MainWindow XAML event handlers are present in MainWindow.xaml.cs.
+PASS: stable selection state fields (anchor + extent + side) are present.
+PASS: edge autoscroll has a 120 ms dwell and reduced maximum scroll step.
+PASS: existing selection is explicitly re-applied before/after outer-list scrolling.
+PASS: inactive selection highlighting is enabled.
+PASS: UI/Core assembly versions are 2.5.3.
+
+Limit: no Windows .NET/WPF runtime is available in this environment, so final build/runtime behavior still requires the normal BUILD_EXE.cmd test on Windows.

@@ -1,0 +1,645 @@
+{
+  "version": "2.15.0",
+  "baseline_source_sha256": "b3e0b65f87935507afe8897d9823b04f584b09239eac44b18d02a815f3362ff7",
+  "changed_or_added_files": [
+    "BUILD_EXE.cmd",
+    "BUILD_EXE.ps1",
+    "BUILD_SETUP.ps1",
+    "ClipShelf/App.xaml.cs",
+    "ClipShelf/AppSettings.cs",
+    "ClipShelf/ClipShelf.csproj",
+    "ClipShelf/MainWindow.xaml",
+    "ClipShelf/MainWindow.xaml.cs",
+    "ClipShelf/PickerClipboard.cs",
+    "ClipShelf/PickerIntegration.cs",
+    "ClipShelf/ProductFeatures.cs",
+    "ClipShelf/QuickPickerModel.cs",
+    "ClipShelf/QuickPickerWindow.xaml",
+    "ClipShelf/QuickPickerWindow.xaml.cs",
+    "ClipShelf/SettingsDialog.xaml",
+    "ClipShelf/SettingsDialog.xaml.cs",
+    "ClipShelf.Core/BubbleForm.cs",
+    "ClipShelf.Core/ClipShelf.Core.csproj",
+    "ClipShelf.Core/CoreContext.cs",
+    "ClipShelf.Core/CoreStateStore.cs",
+    "ClipShelf.Core/CrashReporter.cs",
+    "ClipShelf.Core/NativeMessageWindow.cs",
+    "DEVELOPMENT_HISTORY.md",
+    "Diagnostics/Measure-Wake.ps1",
+    "README.txt",
+    "README_BUILD.txt",
+    "README_v2.15.0.txt",
+    "Shared/UiChannel.cs",
+    "Tests/Program.cs",
+    "Tests/Tests.csproj",
+    "installer/ClipShelf.nsi",
+    "installer/uninstall-files.nsh"
+  ],
+  "engineering_inputs": [
+    {
+      "path": "BUILD_EXE.cmd",
+      "size_bytes": 1161,
+      "sha256": "a007a0c6f7f60182f0123d837c02b4e66fcc3d067bfbc6b8abe116eb43006e76"
+    },
+    {
+      "path": "BUILD_EXE.ps1",
+      "size_bytes": 7784,
+      "sha256": "1c77043226a7fb7f92bab7c778eba06231cd925ad25360dd46bb4c858a8db5d8"
+    },
+    {
+      "path": "BUILD_SETUP.cmd",
+      "size_bytes": 143,
+      "sha256": "3df4ffc7fabaad04676807c348397bf6e64bf2bfd32cb3cb6d6487ceb8a623f8"
+    },
+    {
+      "path": "BUILD_SETUP.ps1",
+      "size_bytes": 1331,
+      "sha256": "0641208a46471260cd06aeb62be8efc8992d3ea7736ac13a2f49408a80e80782"
+    },
+    {
+      "path": "ClipShelf/App.xaml",
+      "size_bytes": 694,
+      "sha256": "f9587c5d00a46505175b82df92a019fea925f5f27a039d0e7588db0d12d13275"
+    },
+    {
+      "path": "ClipShelf/App.xaml.cs",
+      "size_bytes": 1725,
+      "sha256": "41d1dfbbf8e49d8a0ccd138a46219b3125a009de3e6143b50f6649ed7bed77b1"
+    },
+    {
+      "path": "ClipShelf/AppSettings.cs",
+      "size_bytes": 4442,
+      "sha256": "61a089f53574e8156ec85a2c600611d5cc488daff6a09ee61c26acaa88dd7bad"
+    },
+    {
+      "path": "ClipShelf/BackupService.cs",
+      "size_bytes": 31695,
+      "sha256": "2eb5968f3704d2a34868f6af876d9fd6d862cee9bfee7f40488ef4a711a013a4"
+    },
+    {
+      "path": "ClipShelf/CardInteractions.cs",
+      "size_bytes": 14992,
+      "sha256": "ba7d5f474bf9d2507640330a4318c6cf1913ee925dc1a510abea43fe5a3641e2"
+    },
+    {
+      "path": "ClipShelf/CategoryDialog.xaml",
+      "size_bytes": 1261,
+      "sha256": "c032a7c0f1820b670c9f483525d9063d4e52b972ba593e24581afcb67ab420c6"
+    },
+    {
+      "path": "ClipShelf/CategoryDialog.xaml.cs",
+      "size_bytes": 820,
+      "sha256": "8df7ff6d52baed24f7f00fbd42157922573264bd3086bd13922b8b4b8d6a112d"
+    },
+    {
+      "path": "ClipShelf/ClipEditing.cs",
+      "size_bytes": 2271,
+      "sha256": "e0409997f64d37508567719da725c88f95bd7d167d3d0be6864aa1affe82ca08"
+    },
+    {
+      "path": "ClipShelf/ClipItem.cs",
+      "size_bytes": 10121,
+      "sha256": "a0c29c8eb1ccc33749bb9f9f90f843e196c2072e16cfa82f204ff1cdc2ae4202"
+    },
+    {
+      "path": "ClipShelf/ClipShelf.csproj",
+      "size_bytes": 861,
+      "sha256": "b2997ef13d40dc5ef593f11ee1b2296839e3b2b9fb79df07149f9ae59cf3d953"
+    },
+    {
+      "path": "ClipShelf/CoreBridge.cs",
+      "size_bytes": 4515,
+      "sha256": "7d6f8d1224ad75acf14a336ab1d8ca9de32b3931b7dcf9e6178e8eb3c018eb45"
+    },
+    {
+      "path": "ClipShelf/FolderPickerDialog.xaml",
+      "size_bytes": 1450,
+      "sha256": "44ab723dc65c1d7212f733c8040312fe968c1f6a405536fd88c6f4b0c5bfb84d"
+    },
+    {
+      "path": "ClipShelf/FolderPickerDialog.xaml.cs",
+      "size_bytes": 1476,
+      "sha256": "559f4d4ad429afde0a0d78e449160581d609f84ff8b1fa006339a918564f69c8"
+    },
+    {
+      "path": "ClipShelf/HistoryStore.cs",
+      "size_bytes": 3490,
+      "sha256": "fa73f3568ec6b5c6d51c5da2a54dec054683bbbbcdcbb2c61b8727045293e835"
+    },
+    {
+      "path": "ClipShelf/ImportPreviewDialog.xaml",
+      "size_bytes": 4394,
+      "sha256": "108ca007eb5bf55ad7aa1b98d9d21370c922069f3fe339a64ea916e6b7c80a35"
+    },
+    {
+      "path": "ClipShelf/ImportPreviewDialog.xaml.cs",
+      "size_bytes": 2265,
+      "sha256": "d249536c48c4cdc0818ff20965c9c81232baa543acb2c43e0921a8cd84ffd0e9"
+    },
+    {
+      "path": "ClipShelf/InputDialog.xaml",
+      "size_bytes": 3795,
+      "sha256": "c3e3c663dbb897e56661a89a98d46bc9b1d0f07d2c33019728f60c454282e236"
+    },
+    {
+      "path": "ClipShelf/InputDialog.xaml.cs",
+      "size_bytes": 1462,
+      "sha256": "83846edae9b7fbae33125ce6ff1b73b9a367f63c0060156f35e1e4a0d27a9ad4"
+    },
+    {
+      "path": "ClipShelf/MainWindow.xaml",
+      "size_bytes": 49172,
+      "sha256": "0b2bd8bdfb207dd49fcbcbb3979ec5e3a7523db12fd7322b05baf6f440f98d6d"
+    },
+    {
+      "path": "ClipShelf/MainWindow.xaml.cs",
+      "size_bytes": 183815,
+      "sha256": "b02f0f952380e5af67420578c05d199d064cf503d4c69693881c3d6cb59d9a9b"
+    },
+    {
+      "path": "ClipShelf/MiniWindow.xaml",
+      "size_bytes": 1465,
+      "sha256": "8cc998e9bda198ac33315012d8b92689d217401ef4017f60c4541d67718cfacb"
+    },
+    {
+      "path": "ClipShelf/MiniWindow.xaml.cs",
+      "size_bytes": 3549,
+      "sha256": "181617c1341211a0a62bb918a580aeac025e239bfd4f67b71b6dd47471df101c"
+    },
+    {
+      "path": "ClipShelf/PickerClipboard.cs",
+      "size_bytes": 5187,
+      "sha256": "217abaa30c9aadc0841d2fa29ce5e70539f561794718451951be5ae2793e519c"
+    },
+    {
+      "path": "ClipShelf/PickerIntegration.cs",
+      "size_bytes": 4300,
+      "sha256": "5eaf1c5d3769c81e451d099b650bbcd4ea5f2e35fe4cdac687bf3003674bf40f"
+    },
+    {
+      "path": "ClipShelf/ProductFeatures.cs",
+      "size_bytes": 15558,
+      "sha256": "bb7a2316d908de4d881cbf704f03308621c3426b84ee512049b90087ee96bea7"
+    },
+    {
+      "path": "ClipShelf/QuickPickerModel.cs",
+      "size_bytes": 2022,
+      "sha256": "eaee755b5b5c94560dd0a28e089a4bb6e91325fe5564ebaf95a121e2afdc0581"
+    },
+    {
+      "path": "ClipShelf/QuickPickerWindow.xaml",
+      "size_bytes": 3652,
+      "sha256": "69be9a8345f5593a09fde95f4f5ed7c2c01524f869ad7996bbec7ec3e3a53270"
+    },
+    {
+      "path": "ClipShelf/QuickPickerWindow.xaml.cs",
+      "size_bytes": 12598,
+      "sha256": "46a078771fa51c5735a0c37117f1db6dd94f9c958291b5d83f8ed0bbd85980b9"
+    },
+    {
+      "path": "ClipShelf/SettingsDialog.xaml",
+      "size_bytes": 6290,
+      "sha256": "6461e28081f40007acca77019151047944b0b05558c881cb73a4ebe9988202b4"
+    },
+    {
+      "path": "ClipShelf/SettingsDialog.xaml.cs",
+      "size_bytes": 5085,
+      "sha256": "e78358924a537753cb88beb6ab10ecb2e271788532f9eab325919a4eba0931e7"
+    },
+    {
+      "path": "ClipShelf/SidebarItem.cs",
+      "size_bytes": 5474,
+      "sha256": "9c309912a6814ceeb89964355dd9c96eb187bf40b7c4256b959f731b0c436de2"
+    },
+    {
+      "path": "ClipShelf/TextEditorDialog.xaml",
+      "size_bytes": 2894,
+      "sha256": "5e0f0675cb425e5af2fbd46c9660ca42d0864a0dbfa70a8bf1735898f6c198b9"
+    },
+    {
+      "path": "ClipShelf/TextEditorDialog.xaml.cs",
+      "size_bytes": 2870,
+      "sha256": "330afee5a574b905560e25ab4e3f39026d689091959a32177c8497be9cf924bd"
+    },
+    {
+      "path": "ClipShelf/app.manifest",
+      "size_bytes": 670,
+      "sha256": "9688dc7f061e97d93f098b2738321309ef2560d8c4ddcdc76df5a5acdaa4433c"
+    },
+    {
+      "path": "ClipShelf/clipshelf.ico",
+      "size_bytes": 17425,
+      "sha256": "4c0d11560e386a65c4f212dc044da8aa978823506c5e9d5d04ca4301fbbe6183"
+    },
+    {
+      "path": "ClipShelf.Core/BubbleForm.cs",
+      "size_bytes": 7617,
+      "sha256": "99f73231eaf1e8187007eaf54381287afd1b2a49f2200ed18f16717603104670"
+    },
+    {
+      "path": "ClipShelf.Core/ClipShelf.Core.csproj",
+      "size_bytes": 776,
+      "sha256": "67ad8a21b12af0a14bab2e87980083d21d891f23cd4e1b9f2abb38db41a9227b"
+    },
+    {
+      "path": "ClipShelf.Core/CoreContext.cs",
+      "size_bytes": 24044,
+      "sha256": "50a817cafab6c2ebd68c9dd8a0dc9f45338f32567c0f530311f91695b37f84f5"
+    },
+    {
+      "path": "ClipShelf.Core/CoreStateStore.cs",
+      "size_bytes": 13757,
+      "sha256": "fd66399278fd9f956f8cb68bc583f05a26edd44684c03762f1cd05d6d23455c8"
+    },
+    {
+      "path": "ClipShelf.Core/CrashReporter.cs",
+      "size_bytes": 4707,
+      "sha256": "a74a470963276191acb8e4b51b4ea72d218515b425d43253b59e0c2aa8e53917"
+    },
+    {
+      "path": "ClipShelf.Core/EventNames.cs",
+      "size_bytes": 1210,
+      "sha256": "26f0c7d8f173c7571f24a1b06759559f06d469a03208481d6b99b59aca7c179b"
+    },
+    {
+      "path": "ClipShelf.Core/NativeMessageWindow.cs",
+      "size_bytes": 2217,
+      "sha256": "7e33b7ff176a2a9af51955ba095b99dc90637ed6fca50a3281de0af5ae6e8fc3"
+    },
+    {
+      "path": "ClipShelf.Core/Program.cs",
+      "size_bytes": 3720,
+      "sha256": "05636fdfc966fdd497a101bb7edf2991bc9152e438246aa67f1f2b946cc403b7"
+    },
+    {
+      "path": "ClipShelf.Core/clipshelf.ico",
+      "size_bytes": 17425,
+      "sha256": "4c0d11560e386a65c4f212dc044da8aa978823506c5e9d5d04ca4301fbbe6183"
+    },
+    {
+      "path": "DEVELOPMENT_HISTORY.md",
+      "size_bytes": 48031,
+      "sha256": "3a327472b476e3636fa9a93a44c6df72a57197b90b686414382c1888dfb76161"
+    },
+    {
+      "path": "Diagnostics/Measure-Wake.ps1",
+      "size_bytes": 3874,
+      "sha256": "86c870eb01916d9b7692bf6ad38b767ab4379e3f699b3f1e4175185e2df6e287"
+    },
+    {
+      "path": "README.txt",
+      "size_bytes": 4728,
+      "sha256": "6ffb79c65ecb70897c4d0cb065a9a7e02c8045e6dde0aa32b1456bdb26d84318"
+    },
+    {
+      "path": "README_BUILD.txt",
+      "size_bytes": 464,
+      "sha256": "b3274f9e0ffed69da92cfc5809ebeb607b2d9339afc430285a7259e8fda2edfe"
+    },
+    {
+      "path": "README_v2.0.1.txt",
+      "size_bytes": 541,
+      "sha256": "3d2a8cd2d4d9fa5c709a75397ae71a5903d0773aa011d6089114972edb74bfdc"
+    },
+    {
+      "path": "README_v2.0.2.txt",
+      "size_bytes": 1273,
+      "sha256": "68b8736946df5c6d3db2a0051ccf6a10384ba7ca60e9aac138dcb0fbb4969df4"
+    },
+    {
+      "path": "README_v2.0.3.txt",
+      "size_bytes": 730,
+      "sha256": "78726480d2f038b937d20ab22c75b290cc2fed8c75ed6b97dd80bb20ed1e7684"
+    },
+    {
+      "path": "README_v2.0.txt",
+      "size_bytes": 1676,
+      "sha256": "99e53c98d9b6866dbaa634c899320f8745ad1cf42bfd0d6812de7f561fabe6e7"
+    },
+    {
+      "path": "README_v2.1.txt",
+      "size_bytes": 920,
+      "sha256": "de0d0c9cad6f42417692938b1cde50d219ee2b1fde293ad033e5be04e65fb97e"
+    },
+    {
+      "path": "README_v2.10.0.txt",
+      "size_bytes": 3364,
+      "sha256": "85416cabea0d868cd32874002f48b6e058b09196042a4e9ca9238417095e8eec"
+    },
+    {
+      "path": "README_v2.10.1.txt",
+      "size_bytes": 3539,
+      "sha256": "49d484eabb62c492a78a7f5185ea1f4ffe41b2523407b72b4d2c131bfacf6201"
+    },
+    {
+      "path": "README_v2.11.0.txt",
+      "size_bytes": 2120,
+      "sha256": "0a1a080e76fa5baabf93aee11b5756bcde6a63e2bc48a40a14cf0b7d647e9d37"
+    },
+    {
+      "path": "README_v2.12.0.txt",
+      "size_bytes": 3289,
+      "sha256": "4fed5464ef9ec667c5d66200b4956367c4d6437f7a4a3e532ab48df1a7b46aa4"
+    },
+    {
+      "path": "README_v2.13.0.txt",
+      "size_bytes": 1684,
+      "sha256": "02b2d78326c848181a53c2d0c6902008cd42f431e48adc26be238f4579606f1d"
+    },
+    {
+      "path": "README_v2.14.2.txt",
+      "size_bytes": 2465,
+      "sha256": "4c8c1cfd65c8607a4de895b9439259868e6bce4aa6f39cc74b51d8077a76bf3e"
+    },
+    {
+      "path": "README_v2.15.0.txt",
+      "size_bytes": 4728,
+      "sha256": "6ffb79c65ecb70897c4d0cb065a9a7e02c8045e6dde0aa32b1456bdb26d84318"
+    },
+    {
+      "path": "README_v2.2.txt",
+      "size_bytes": 894,
+      "sha256": "f6ea9543b6da9482073fe4f701a47caf1df397258f119c0e7ddf5a6ed952cf3d"
+    },
+    {
+      "path": "README_v2.4.txt",
+      "size_bytes": 1325,
+      "sha256": "32b204b207d30e26b4f2b97928f33dcbc42a9f30cc2d70ddbad3d840c4309086"
+    },
+    {
+      "path": "README_v2.5.1.txt",
+      "size_bytes": 1521,
+      "sha256": "c0415d39a860350d29c8a2195f6befe283e53fca5fb6832865f055688c53c965"
+    },
+    {
+      "path": "README_v2.5.2.txt",
+      "size_bytes": 1070,
+      "sha256": "a43cb32be6ccbfcc65ef47c3b83ca97f716b1790dd7e4001c64a5fdbb769815e"
+    },
+    {
+      "path": "README_v2.5.3.txt",
+      "size_bytes": 1845,
+      "sha256": "f38eaa63698aaa8d317987b8e94f22e5f656fc017d45b2505c941d329c1756a9"
+    },
+    {
+      "path": "README_v2.5.4.txt",
+      "size_bytes": 1141,
+      "sha256": "f36b589bba7a6e5c57a3f59983a2f71d4328ad0b3b375e25b6e01d0d26f94d91"
+    },
+    {
+      "path": "README_v2.5.txt",
+      "size_bytes": 1952,
+      "sha256": "045c75015524dc4b7180126e987048439d2637aff745aa3413b857ec9bc2fe0a"
+    },
+    {
+      "path": "README_v2.6.2.txt",
+      "size_bytes": 1419,
+      "sha256": "e92cddd7951eae911fcfafe4db19f3278f16323d3c1a473216b471a2b60755a2"
+    },
+    {
+      "path": "README_v2.6.4.txt",
+      "size_bytes": 2046,
+      "sha256": "cef44a31db8f632d8604ee48f794d98ce96d95563b97463cc51cc13adfb3b5d7"
+    },
+    {
+      "path": "README_v2.6.5.txt",
+      "size_bytes": 1700,
+      "sha256": "9b64923db29fb7290d2016269665a25b5c176f2a96b91c0c8fbc63e5b4901d1f"
+    },
+    {
+      "path": "README_v2.6.6.txt",
+      "size_bytes": 970,
+      "sha256": "db0093170e0e48737c94be6a8638971ac770029503599833713720f6b23f6d5c"
+    },
+    {
+      "path": "README_v2.6.txt",
+      "size_bytes": 2022,
+      "sha256": "4e6c33bc05cee89c30b08ad4bb3c74ae401bd9f7acb2d61cacf3bfd4d703af54"
+    },
+    {
+      "path": "README_v2.7.0.txt",
+      "size_bytes": 2765,
+      "sha256": "135c1caf9bc753794746e28f5f0aebd0466f7c518268796372f0832634f09428"
+    },
+    {
+      "path": "README_v2.8.0_EXPERIMENTAL.txt",
+      "size_bytes": 3124,
+      "sha256": "5e7b1cc6cebea745aaddad152e834c7e4ccaac05e8015452f54b97b806bd66da"
+    },
+    {
+      "path": "README_v2.8.1_EXPERIMENTAL.txt",
+      "size_bytes": 1730,
+      "sha256": "9df6d21d7e2ac2cc655332a7d742c1647a0e3012dbeff9d0bd685667f4c38ced"
+    },
+    {
+      "path": "README_v2.8.2.txt",
+      "size_bytes": 1477,
+      "sha256": "a46f00409e3824fe0f478da7d614ba87f0d5ec4c0d6c6954b2d102a3be88e3a2"
+    },
+    {
+      "path": "README_v2.9.0.txt",
+      "size_bytes": 2406,
+      "sha256": "bcbc32fc2d99d1d1fad599b9119a580e1789cd5c1031f72811dbe3505df582aa"
+    },
+    {
+      "path": "RUN_DEV.cmd",
+      "size_bytes": 105,
+      "sha256": "70f85235f4ef523070aee285f40ebbbb4e9541ea94ccdcf3620689000acf09c6"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.10.0.txt",
+      "size_bytes": 3430,
+      "sha256": "368ce120c2ab1bcb145db4278b7b5c12627219ee649df4e653f197fc050fc5e5"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.10.1.txt",
+      "size_bytes": 2109,
+      "sha256": "3c72ca0d78809649571d628a631b0a20206e685916f44e892eae3edd0288e116"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.10.1_COMPILEFIX1.txt",
+      "size_bytes": 468,
+      "sha256": "2657299c1cac6f24e05e456d05b275fb17d25e424ebb158b74ba6f62457982e2"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.11.0.txt",
+      "size_bytes": 356,
+      "sha256": "f1501e32d7bdc99299038c78f5b7ae5bed2406ffe8a5686ad534bcbad17cd61c"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.12.0.txt",
+      "size_bytes": 995,
+      "sha256": "53bb456bebd96365114585927285e0b7734db3e1845fcabe4d48c8866369165f"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.13.0.txt",
+      "size_bytes": 801,
+      "sha256": "7123625671da56916fa5845dd6eb526219eeaeda7d1be63ac04e72685417dca8"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.5.1.txt",
+      "size_bytes": 638,
+      "sha256": "920c811c13d9a46c133c126e040d471be667184ab65a03aa43837ffbfcb3408a"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.5.2.txt",
+      "size_bytes": 953,
+      "sha256": "3e48282c90c2930c1c0bcdd1a1c2306948091517db869e856e25e70fff6549b6"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.5.3.txt",
+      "size_bytes": 681,
+      "sha256": "7ed5cfa26f607be8a8d7b5b85718dc579e08d089c9bbc03bfb7d234dbc1c41a1"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.5.4.txt",
+      "size_bytes": 659,
+      "sha256": "16a06477022e018c95dab8ab8854848f748b66ee45c366671f41e1d4c5709c29"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.5.txt",
+      "size_bytes": 1454,
+      "sha256": "cd6387c5baab4cda9b4a20fbc4949b12e2dfaa980dc680e01c86a34c793d3fc3"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.6.2.txt",
+      "size_bytes": 790,
+      "sha256": "b783fbc3215b997f52463c7a7d41009cae2db8c005f2f03db9836669d40530fa"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.6.4.txt",
+      "size_bytes": 775,
+      "sha256": "c70f746ff05e79b1676a2a027d5961dcbf13356edd422154e6e5466cc743eb1c"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.6.5.txt",
+      "size_bytes": 780,
+      "sha256": "6ab06f400aee9cdd668dda4c11cc7838f853dbf89cb01a97c3b1ca52acad7b80"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.6.6.txt",
+      "size_bytes": 502,
+      "sha256": "bee7e7d365655a768b544da7265c22f29ed04a506c5a6f9373b4319cde9caba4"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.6.txt",
+      "size_bytes": 1609,
+      "sha256": "a89580a74ad01b97e4e7152c38a4ae2e4cdb96c313f09a7f901425c5a9e033a4"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.7.0.txt",
+      "size_bytes": 1390,
+      "sha256": "4943be2becb2cce1376d7f1ed5930e05ed495c06416e4589274271a65e785a2b"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.8.0_BUILD_HARNESS3.txt",
+      "size_bytes": 1191,
+      "sha256": "e13a56de0317a5354deff81180f876b551c5c959935baa15947be3e9ed20a80e"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.8.0_CAPTURE_ROUTE_FIX1.txt",
+      "size_bytes": 747,
+      "sha256": "d64961a7d776b5f7168ad00c451cbdbb24a5bc9eea867b0aafe6cd148288fe26"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.8.0_EXPERIMENTAL.txt",
+      "size_bytes": 1331,
+      "sha256": "c30abffb927ac28419d08b24411d3c5bc64a8c8f803d9cb71ce86068eceed6ea"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.8.0_EXPERIMENTAL_COMPILEFIX1.txt",
+      "size_bytes": 1525,
+      "sha256": "1a60149b9c40646e255a17fafa6727e3ec27ef5c0ec349ab21adb87912c8270b"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.8.1_POINTER_CONTEXT.txt",
+      "size_bytes": 1979,
+      "sha256": "8c9ba03593aeb1239bd2be5193f705a6cdd5e6936ef0719fc2a6c5516c3e3c9c"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.8.2.txt",
+      "size_bytes": 974,
+      "sha256": "effce7040cfec514a5bde0b767874f74b7fdbbe3269327183c7e6f6f3f9f9388"
+    },
+    {
+      "path": "SOURCE_CHECK_v2.9.0.txt",
+      "size_bytes": 434,
+      "sha256": "06fe2a0ac72d2bfba07075da26cd58515c150bb8bec558069e12e7d5e30c33d2"
+    },
+    {
+      "path": "Shared/AutoBackup.cs",
+      "size_bytes": 4572,
+      "sha256": "40c887b5b1a98c0bb7317a888a9c721637e5a68fd8dd35e12c1302b3d82a57f5"
+    },
+    {
+      "path": "Shared/SafeState.cs",
+      "size_bytes": 2530,
+      "sha256": "7776cade660988f679d14afb29277d79e03ee6c23c1b7aa964058c64bf45d9fb"
+    },
+    {
+      "path": "Shared/UiChannel.cs",
+      "size_bytes": 3167,
+      "sha256": "8bf82d0a14520521339f94ec7ff05bdbeca3f2cce8f6595efe28331547c0d53e"
+    },
+    {
+      "path": "TEST_v2.10.1.txt",
+      "size_bytes": 1291,
+      "sha256": "bfcc12d3b6f68e71b3e825ddfc55c757dde63b6255be6b35ce6be9498b2b84b9"
+    },
+    {
+      "path": "TEST_v2.11.0.txt",
+      "size_bytes": 475,
+      "sha256": "89f9705907a81113fad5e78dc1257b496737a2d45e15c00c637e7294605fadde"
+    },
+    {
+      "path": "TEST_v2.12.0.txt",
+      "size_bytes": 927,
+      "sha256": "64148e0ab9381c7fa40f665dea13828f0bbb2d0b1cc773296c0b6f78413a452e"
+    },
+    {
+      "path": "TEST_v2.13.0.txt",
+      "size_bytes": 786,
+      "sha256": "323608b018f22fcdecc78663a5d9045581e9f570b80e8ffe9c686ec2b82c87ad"
+    },
+    {
+      "path": "TEST_v2.7.0.txt",
+      "size_bytes": 1792,
+      "sha256": "d60d809dc674f8cef26945417e578c68abe242b2d712d67011bb5b90922b9c09"
+    },
+    {
+      "path": "TEST_v2.8.0_EXPERIMENTAL.txt",
+      "size_bytes": 1080,
+      "sha256": "9d1e9476237ea4997cc46b8178119f9d190b60adcbb8595356b9aef65f9a9fad"
+    },
+    {
+      "path": "TEST_v2.8.1_EXPERIMENTAL.txt",
+      "size_bytes": 1265,
+      "sha256": "8a05a3c47dfd647fcedd916f3511d52820ff231f25eedb9bfbb908d3fa105bbf"
+    },
+    {
+      "path": "TEXT_PROBE_TEST_GUIDE.txt",
+      "size_bytes": 1328,
+      "sha256": "872a1f019d14636f72ecd4ab6cf33c8ba2f99426a6ad82a427d1212528a8b02c"
+    },
+    {
+      "path": "Tests/Program.cs",
+      "size_bytes": 20332,
+      "sha256": "6f7c3a8a6ff39d9ba968d1a59cd63b11216c75d648d32b8095ab0615678bf810"
+    },
+    {
+      "path": "Tests/Tests.csproj",
+      "size_bytes": 633,
+      "sha256": "883a0a154640cbc0939569d8d6e9c47268c9bbdad24f3e2e6a59c71b54a56258"
+    },
+    {
+      "path": "installer/ClipShelf.nsi",
+      "size_bytes": 5057,
+      "sha256": "7dd0c78621f87b32b4320868c0a06c38acf50dc4f5eb72ea9863d4fe5d2f70f2"
+    },
+    {
+      "path": "installer/uninstall-files.nsh",
+      "size_bytes": 50838,
+      "sha256": "5f4a645eb45157d3375bd7ff1b2f8075f04f906a3ff4d97313a6c89acc9fbdee"
+    }
+  ]
+}

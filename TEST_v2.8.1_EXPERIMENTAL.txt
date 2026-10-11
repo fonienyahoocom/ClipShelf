@@ -1,0 +1,31 @@
+ClipShelf v2.8.1 Experimental — Pointer Context Capture TEST
+==============================================================
+
+Build gate
+----------
+Required:
+  BUILD SUCCESS
+  Experimental pointer text capture: AVAILABLE
+
+Main functional check
+---------------------
+1. Start ClipShelf_READY\ClipShelf.exe.
+2. Enable 實驗性：滑鼠位置文字擷取.
+3. Use β 指向擷取 on a paragraph in Edge / ChatGPT.
+4. The preview should offer the ranges the provider actually supports. Expected on a capable provider:
+   - 段落
+   - 上下文（前後各 1 段）
+   - 上下文（前後各 2 段）
+   - 大區塊（前後各 5 段，最多約 8000 字）
+   - 單行 / 字詞 / 字元
+5. Default should prefer 上下文（前後各 1 段） when available.
+6. Switching the range should replace the preview text and update the character count.
+7. 加入歷史 should add only the currently displayed/edited text.
+
+Failure-boundary check
+----------------------
+If a program/provider cannot move paragraph endpoints, the larger choices may be absent. This is not a reason to launch OCR or another fallback in v2.8.1. Smaller UIA choices should remain usable.
+
+OCR
+---
+Not implemented in this build. NEXT_OCR_STRATEGY.md is the approved handoff for the next version.

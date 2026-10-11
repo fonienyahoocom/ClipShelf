@@ -1,0 +1,9 @@
+{
+  "status": "STATIC_PASS_ONLY",
+  "runner": "windows-2022",
+  "trigger": "same-repo pull_request/main push",
+  "yaml_parse": "PASS",
+  "python_AST": "PASS",
+  "github_actions_execution": "BLOCKED_NO_REPOSITORY",
+  "chat_build_ready": false
+}

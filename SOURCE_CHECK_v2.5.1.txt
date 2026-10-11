@@ -1,0 +1,12 @@
+ClipShelf v2.5.1 source-level check
+
+Checked in this environment:
+- All XAML files parse as XML.
+- MainWindow.xaml referenced event handlers all exist in MainWindow.xaml.cs.
+- Modified C# files have balanced raw braces.
+- v2.5 safe History logic remains unchanged: CopyItem => HistoryVisible=true; selected text copy => AddOrTouchItem => HistoryVisible=true.
+- Sidebar collapse state is UI-only and persisted in Settings.CollapsedSidebarNodes.
+- No new background polling, network calls, or permanent timers were added.
+
+Not claimed here:
+- Windows WPF build/runtime test. This environment does not have the .NET Windows/WPF build chain.

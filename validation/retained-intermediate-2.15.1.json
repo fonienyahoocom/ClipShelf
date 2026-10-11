@@ -1,0 +1,48 @@
+{
+  "version": "2.15.1",
+  "status": "RETAINED_INTERMEDIATE; all5Drive bytes verified and5Library creates succeeded; CURRENT not promoted; superseded by final2.15.2",
+  "drive_files": [
+    {
+      "file_name": "ClipShelf-2.15.1-Setup.exe",
+      "size_bytes": 49760421,
+      "sha256": "862eef53994dd768ca68a6419402337bddf9c040e79584686794697d8c057a93",
+      "drive_id": "1Hoa3Q3EzrPt5tS5XLFxvb6-9-hwQrYl0",
+      "drive_url": "https://drive.google.com/file/d/1Hoa3Q3EzrPt5tS5XLFxvb6-9-hwQrYl0/view?usp=drivesdk"
+    },
+    {
+      "file_name": "ClipShelf-2.15.1-Source.zip",
+      "size_bytes": 625361,
+      "sha256": "e9736f1eb71aeafa721b657d1fcd8ddfdbf6fbd01bb26c161c97623ddf13525d",
+      "drive_id": "1gKQuptwckaplUBGR-lhHmgFdrVmS8tr8",
+      "drive_url": "https://drive.google.com/file/d/1gKQuptwckaplUBGR-lhHmgFdrVmS8tr8/view?usp=drivesdk"
+    },
+    {
+      "file_name": "ClipShelf-2.15.1-使用說明.txt",
+      "size_bytes": 6059,
+      "sha256": "714c56c4c6706820d5e5d3aa251ae48478b6957e16fb7c29d22e3dcec39b1525",
+      "drive_id": "1X_5V3Fa42wOK3sLeUTHAwgdpLjN_M_p6",
+      "drive_url": "https://drive.google.com/file/d/1X_5V3Fa42wOK3sLeUTHAwgdpLjN_M_p6/view?usp=drivesdk"
+    },
+    {
+      "file_name": "ClipShelf-2.15.1-更新說明與測試結果.md",
+      "size_bytes": 3898,
+      "sha256": "b3cf3035d36ce868888503543887aa6b200ca764472a3d8da862b544ae99689c",
+      "drive_id": "1XWN2UlJ7pIWtxuYdGQ-70zCXzOKXR8Hw",
+      "drive_url": "https://drive.google.com/file/d/1XWN2UlJ7pIWtxuYdGQ-70zCXzOKXR8Hw/view?usp=drivesdk"
+    },
+    {
+      "file_name": "ClipShelf-2.15.1-版本交付清單.json",
+      "size_bytes": 5892,
+      "sha256": "73d061b4129723ea4f5b5759eea87e1359c384043fc61741a4980b303cb2ded9",
+      "drive_id": "16GSr7CyvVt4Vyh-qAkduWkn5n8yV55PW",
+      "drive_url": "https://drive.google.com/file/d/16GSr7CyvVt4Vyh-qAkduWkn5n8yV55PW/view"
+    }
+  ],
+  "library_file_ids": {
+    "Setup.exe": "libfile_005ba97b1f4c8191ac59c4d4d4c2cbf2",
+    "Source.zip": "libfile_996f353ca25c81919f265f3ebb2cfa75",
+    "usage": "libfile_67aec4b4a8e88191bba0c3a0f04ec182",
+    "notes": "libfile_f8341c4232588191b7839cadbd4d9021",
+    "manifest": "libfile_2bb98923820881918c1e26cdc715a127"
+  }
+}

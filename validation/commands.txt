@@ -1,0 +1,10 @@
+Actual Linux host commands (paths normalized to source-root relative)
+.NET SDK 8.0.425 installed from official SDK archive
+dotnet run --project Tests/Tests.csproj -c Release
+dotnet publish ClipShelf.Core/ClipShelf.Core.csproj -c Release -r win-x64 --self-contained true -p:EnableWindowsTargeting=true -o release
+dotnet publish ClipShelf/ClipShelf.csproj -c Release -r win-x64 --self-contained true -p:EnableWindowsTargeting=true -o release/ui
+NSISDIR=<NSIS-share> makensis -DPAYLOAD_DIR=<release> -DOUTPUT_FILE=<Setup.exe> installer/ClipShelf.nsi
+7z x <Setup.exe> -o<extracted> -y
+python validation/verify_release.py --source <current-source> --baseline <verified-2.15.1-source> --setup <Setup.exe> --extracted <extracted>
+
+BUILD_PORTABLE.py execution blocked on managed host child process /proc; Windows Actions not executed because ClipShelf repository not available.

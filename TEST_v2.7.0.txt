@@ -1,0 +1,41 @@
+﻿ClipShelf v2.7.0 - high-value Windows regression test
+=====================================================
+
+1. BUILD
+   - Fully exit old ClipShelf.
+   - Run BUILD_EXE.cmd.
+   - Required result: BUILD SUCCESS and ClipShelf_READY is created.
+   - TextProbe failure alone must NOT fail the main build.
+
+2. NORMAL DELETE / RESTORE
+   - Create or copy a standalone History item.
+   - Delete it.
+   - Expected: it disappears from History, appears in 最近刪除, and an Undo snackbar appears.
+   - Restore it.
+   - Expected: the item returns and its content is intact.
+
+3. ORGANIZED ITEM SAFETY
+   - Put an item in a folder or 收藏, then copy it so it also appears in History.
+   - Remove it from History.
+   - Expected: the folder/收藏 source remains intact.
+   - From the source item use 更多 -> 移到最近刪除.
+   - Expected: it disappears from active sections and appears in 最近刪除.
+   - Restore it.
+   - Expected: its folder/favorite placement is restored.
+
+4. PERMANENT DELETE GRACE PERIOD
+   - In 最近刪除 choose 永久刪除 and confirm.
+   - Expected: the row shows 永久刪除倒數中 · 仍可復原 and the permanent-delete button is disabled.
+   - Restore within 8 seconds.
+   - Expected: purge is cancelled and the item returns safely.
+   - Repeat and do not restore.
+   - Expected: after about 8 seconds the item is physically purged from ClipShelf.
+
+5. RETENTION
+   - Settings -> 最近刪除.
+   - Verify options: 7 days / 30 days / 90 days / never auto-clear.
+   - Default for an upgraded install should be 30 days.
+
+6. LOW-RESOURCE REGRESSION
+   - Normal Core/UI behavior, tray/bubble, Ctrl+~, Alt+Tab mode and warm standby should behave as before.
+   - No permanent trash polling should appear; timers exist only for short undo/pending-purge windows.

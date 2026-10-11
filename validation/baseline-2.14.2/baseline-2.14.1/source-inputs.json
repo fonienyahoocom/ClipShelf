@@ -1,0 +1,197 @@
+{
+  "version": "2.14.1",
+  "files": [
+    {
+      "path": "BUILD_EXE.cmd",
+      "sha256": "95e8919b8301a48a20cc5a1b47504343e270e81275c7bb8f419eca311669b7ac"
+    },
+    {
+      "path": "BUILD_EXE.ps1",
+      "sha256": "deddda7efd5a20a703d51beb135d393e2e22adb0bb3a2b2ff15a3ea5b93b9f45"
+    },
+    {
+      "path": "BUILD_SETUP.cmd",
+      "sha256": "3df4ffc7fabaad04676807c348397bf6e64bf2bfd32cb3cb6d6487ceb8a623f8"
+    },
+    {
+      "path": "BUILD_SETUP.ps1",
+      "sha256": "42cba7927e3aefa5eeee5b684740667d0ac5b44087fdfc3b3c266f073f292326"
+    },
+    {
+      "path": "ClipShelf/App.xaml",
+      "sha256": "f9587c5d00a46505175b82df92a019fea925f5f27a039d0e7588db0d12d13275"
+    },
+    {
+      "path": "ClipShelf/App.xaml.cs",
+      "sha256": "1a5187dfd164320c0a9f9982eb14ac4a47f2a2200c49601fa2b6b698dd58be84"
+    },
+    {
+      "path": "ClipShelf/AppSettings.cs",
+      "sha256": "5e98a0e75b3a1454f3522906258c73778fae422597dc427ed975d5b3016131b8"
+    },
+    {
+      "path": "ClipShelf/BackupService.cs",
+      "sha256": "2eb5968f3704d2a34868f6af876d9fd6d862cee9bfee7f40488ef4a711a013a4"
+    },
+    {
+      "path": "ClipShelf/CardInteractions.cs",
+      "sha256": "51ba865e4fbd5f93514f25ad0de4be9a2996a395893483708b514d019ebc2c68"
+    },
+    {
+      "path": "ClipShelf/CategoryDialog.xaml",
+      "sha256": "c032a7c0f1820b670c9f483525d9063d4e52b972ba593e24581afcb67ab420c6"
+    },
+    {
+      "path": "ClipShelf/CategoryDialog.xaml.cs",
+      "sha256": "8df7ff6d52baed24f7f00fbd42157922573264bd3086bd13922b8b4b8d6a112d"
+    },
+    {
+      "path": "ClipShelf/ClipEditing.cs",
+      "sha256": "e0409997f64d37508567719da725c88f95bd7d167d3d0be6864aa1affe82ca08"
+    },
+    {
+      "path": "ClipShelf/ClipItem.cs",
+      "sha256": "9534d2267dff820c9ccd1995a3732f54f04728c825fcb2aa17b0b848b12500fc"
+    },
+    {
+      "path": "ClipShelf/ClipShelf.csproj",
+      "sha256": "c9b075ca658322005e1be3382294ff2a3a95e682e38b575670ed9ead4ac916d0"
+    },
+    {
+      "path": "ClipShelf/CoreBridge.cs",
+      "sha256": "7d6f8d1224ad75acf14a336ab1d8ca9de32b3931b7dcf9e6178e8eb3c018eb45"
+    },
+    {
+      "path": "ClipShelf/FolderPickerDialog.xaml",
+      "sha256": "44ab723dc65c1d7212f733c8040312fe968c1f6a405536fd88c6f4b0c5bfb84d"
+    },
+    {
+      "path": "ClipShelf/FolderPickerDialog.xaml.cs",
+      "sha256": "559f4d4ad429afde0a0d78e449160581d609f84ff8b1fa006339a918564f69c8"
+    },
+    {
+      "path": "ClipShelf/HistoryStore.cs",
+      "sha256": "fa73f3568ec6b5c6d51c5da2a54dec054683bbbbcdcbb2c61b8727045293e835"
+    },
+    {
+      "path": "ClipShelf/ImportPreviewDialog.xaml",
+      "sha256": "108ca007eb5bf55ad7aa1b98d9d21370c922069f3fe339a64ea916e6b7c80a35"
+    },
+    {
+      "path": "ClipShelf/ImportPreviewDialog.xaml.cs",
+      "sha256": "d249536c48c4cdc0818ff20965c9c81232baa543acb2c43e0921a8cd84ffd0e9"
+    },
+    {
+      "path": "ClipShelf/InputDialog.xaml",
+      "sha256": "c3e3c663dbb897e56661a89a98d46bc9b1d0f07d2c33019728f60c454282e236"
+    },
+    {
+      "path": "ClipShelf/InputDialog.xaml.cs",
+      "sha256": "83846edae9b7fbae33125ce6ff1b73b9a367f63c0060156f35e1e4a0d27a9ad4"
+    },
+    {
+      "path": "ClipShelf/MainWindow.xaml",
+      "sha256": "a3a3a25c1198ff929ed5e1a634c1e64330dac317f962d62be78ea15362bf7960"
+    },
+    {
+      "path": "ClipShelf/MainWindow.xaml.cs",
+      "sha256": "cc135e790c88a0e93ec177e0eb6a8023dad707a4d6dd79a25c35de3ebba57797"
+    },
+    {
+      "path": "ClipShelf/MiniWindow.xaml",
+      "sha256": "8cc998e9bda198ac33315012d8b92689d217401ef4017f60c4541d67718cfacb"
+    },
+    {
+      "path": "ClipShelf/MiniWindow.xaml.cs",
+      "sha256": "181617c1341211a0a62bb918a580aeac025e239bfd4f67b71b6dd47471df101c"
+    },
+    {
+      "path": "ClipShelf/ProductFeatures.cs",
+      "sha256": "19951b6e92ce9455960e7795090eedef03e241387d9f35dd55f6ce3d876e9243"
+    },
+    {
+      "path": "ClipShelf/SettingsDialog.xaml",
+      "sha256": "232dc0facf0d034e1a1ff211e793568e93436623854d355b3c018748a54b78bb"
+    },
+    {
+      "path": "ClipShelf/SettingsDialog.xaml.cs",
+      "sha256": "5900f88a2dc0e0ae1df5065bc3e2a4ca4941b64f6757442e5f8ad32fd3d5dbf1"
+    },
+    {
+      "path": "ClipShelf/SidebarItem.cs",
+      "sha256": "9c309912a6814ceeb89964355dd9c96eb187bf40b7c4256b959f731b0c436de2"
+    },
+    {
+      "path": "ClipShelf/TextEditorDialog.xaml",
+      "sha256": "5e0f0675cb425e5af2fbd46c9660ca42d0864a0dbfa70a8bf1735898f6c198b9"
+    },
+    {
+      "path": "ClipShelf/TextEditorDialog.xaml.cs",
+      "sha256": "330afee5a574b905560e25ab4e3f39026d689091959a32177c8497be9cf924bd"
+    },
+    {
+      "path": "ClipShelf/app.manifest",
+      "sha256": "9688dc7f061e97d93f098b2738321309ef2560d8c4ddcdc76df5a5acdaa4433c"
+    },
+    {
+      "path": "ClipShelf.Core/BubbleForm.cs",
+      "sha256": "ed7a94dfb548db6b5f3987bd5a7d4246b086734232a42037348e9ba696eb96cd"
+    },
+    {
+      "path": "ClipShelf.Core/ClipShelf.Core.csproj",
+      "sha256": "e7c7c1d5617cb2aa6aa939b6e2b70e21ab32a6e1f9181780a8850a9fbe78cdbe"
+    },
+    {
+      "path": "ClipShelf.Core/CoreContext.cs",
+      "sha256": "963b63f44e3900d481c994b339f8837c02a30c0af992e4f1f2ec3d551d790de8"
+    },
+    {
+      "path": "ClipShelf.Core/CoreStateStore.cs",
+      "sha256": "2cb6984a397233d7d93b9899197572ce7021dfd75a80a3161ff82ca214970b6d"
+    },
+    {
+      "path": "ClipShelf.Core/CrashReporter.cs",
+      "sha256": "a6ff5b7c36c27e4e0c02cdba4b1b401ad54430f4680eca679daa973b7f20a7f6"
+    },
+    {
+      "path": "ClipShelf.Core/EventNames.cs",
+      "sha256": "26f0c7d8f173c7571f24a1b06759559f06d469a03208481d6b99b59aca7c179b"
+    },
+    {
+      "path": "ClipShelf.Core/NativeMessageWindow.cs",
+      "sha256": "8f28d1f5c9e745ceed3acef76024adcf71adedb577fb35a53568013fe3b8b4ed"
+    },
+    {
+      "path": "ClipShelf.Core/Program.cs",
+      "sha256": "05636fdfc966fdd497a101bb7edf2991bc9152e438246aa67f1f2b946cc403b7"
+    },
+    {
+      "path": "RUN_DEV.cmd",
+      "sha256": "70f85235f4ef523070aee285f40ebbbb4e9541ea94ccdcf3620689000acf09c6"
+    },
+    {
+      "path": "Shared/AutoBackup.cs",
+      "sha256": "40c887b5b1a98c0bb7317a888a9c721637e5a68fd8dd35e12c1302b3d82a57f5"
+    },
+    {
+      "path": "Shared/SafeState.cs",
+      "sha256": "7776cade660988f679d14afb29277d79e03ee6c23c1b7aa964058c64bf45d9fb"
+    },
+    {
+      "path": "Tests/Program.cs",
+      "sha256": "a0ddd676815e19965ba8431bc43a283824eda8c78d175c34f32f687b4076c28d"
+    },
+    {
+      "path": "Tests/Tests.csproj",
+      "sha256": "d563b08f1fd32d751338b386a1fe2ae6d4bb41ad23ec8e6eef7fcd3954ad57de"
+    },
+    {
+      "path": "installer/ClipShelf.nsi",
+      "sha256": "a798b7a226c4b8f46e1dddb6965bef9cfac411df6e916b118f33dee3f33e545f"
+    },
+    {
+      "path": "installer/uninstall-files.nsh",
+      "sha256": "a8623430541b2c2fcd91c7d6887d49d3d9141543be603f33f96dab2289eaa071"
+    }
+  ]
+}

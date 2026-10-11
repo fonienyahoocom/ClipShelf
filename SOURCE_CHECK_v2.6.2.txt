@@ -1,0 +1,15 @@
+ClipShelf v2.6.2 source check
+==============================
+
+Applied fixes:
+- ClipShelf.TextProbe/Program.cs imports System.Windows.Automation.Text.
+- TextPatternRange is therefore resolved from the documented namespace.
+- Core/UI versions: 2.6.2.
+- Probe version: 0.1.2.
+- DEVELOPMENT_HISTORY.md added and cumulative.
+- BUILD_EXE.cmd copies DEVELOPMENT_HISTORY.md to ClipShelf_READY on success.
+- BUILD_EXE.cmd verifies Core/UI/Probe executables and the history file before BUILD SUCCESS.
+- BUILD_EXE.cmd removes partial ClipShelf_READY output after a publish/build failure.
+
+Environment limitation:
+This packaging environment is not Windows and does not contain the Windows Desktop .NET SDK/WPF/UIAutomation runtime, so final compilation must be validated on the user's Windows machine.

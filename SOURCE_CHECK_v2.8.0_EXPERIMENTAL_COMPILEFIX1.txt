@@ -1,0 +1,45 @@
+ClipShelf v2.8.0 Experimental Pointer Text Capture — Compile Fix 1
+=================================================================
+
+Purpose
+-------
+Fix the Windows compile error reported for the isolated Experimental Capture helper:
+CS0123 at ClipShelf.ExperimentalCapture\Program.cs line 66.
+
+Actual source change
+--------------------
+ClipShelf.ExperimentalCapture\Program.cs
+
+Before:
+    _form.CancelRequested += CancelAndExit;
+
+After:
+    _form.CancelRequested += () => CancelAndExit();
+
+Reason
+------
+CancelRequested is Action (zero parameters).
+CancelAndExit has one optional string parameter. Optional parameters do not make
+that method group compatible with Action, so an explicit zero-argument lambda is
+required.
+
+Intentionally unchanged
+-----------------------
+- ClipShelf.Core
+- Main ClipShelf UI behavior and UIA integration flow
+- RangeFromPoint / ExpandToEnclosingUnit capture engine
+- Safe Delete
+- user data format
+- remote API boundary
+- Build Harness 3 CMD launcher
+
+Validation available in this environment
+----------------------------------------
+- exact failing subscription identified from the user's CS0123 build output
+- delegate signature and handler signature inspected in source
+- patched subscription is now an explicit zero-argument Action-compatible lambda
+- package/tree comparison performed to ensure Stable Core is unchanged
+
+Windows .NET 8 publish remains the authoritative validation gate.
+Expected successful status after user rebuild:
+    Experimental pointer text capture: AVAILABLE

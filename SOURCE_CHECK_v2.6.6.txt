@@ -1,0 +1,8 @@
+ClipShelf v2.6.6 source check
+=============================
+- Added ClipShelf.Core/CrashReporter.cs
+- Core Program.cs wraps startup in top-level exception capture and records startup stages.
+- Fixed runtime crash handoff filename: 程式閃退_把這個傳給ChatGPT.txt
+- Fixed build failure handoff filename retained: BUILD失敗_把這個傳給ChatGPT.txt
+- Build script leaves package directory before exit to reduce directory locking.
+- Text-capture feature logic otherwise unchanged from v2.6.5.

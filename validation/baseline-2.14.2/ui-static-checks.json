@@ -1,0 +1,9 @@
+{
+  "version": "2.14.2",
+  "xaml_xml": "PASSED",
+  "single_original_body_textbox": "PASSED",
+  "direct_read_only_binding": "PASSED",
+  "body_tooltip_removed": "PASSED",
+  "native_edit_controls_above_body": "PASSED",
+  "runtime_verification": "UNVERIFIED"
+}

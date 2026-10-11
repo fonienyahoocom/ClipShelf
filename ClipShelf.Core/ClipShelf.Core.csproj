@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <Version>2.15.2</Version>
+    <FileVersion>2.15.2.0</FileVersion>
+    <AssemblyVersion>2.15.2.0</AssemblyVersion>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>ClipShelf</AssemblyName>
+    <RootNamespace>ClipShelfCore</RootNamespace>
+    <ApplicationIcon>clipshelf.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup><Compile Include="../Shared/SafeState.cs" Link="SafeState.cs" /><Compile Include="../Shared/AutoBackup.cs" Link="AutoBackup.cs" /><Compile Include="../Shared/UiChannel.cs" Link="UiChannel.cs" /></ItemGroup>
+</Project>

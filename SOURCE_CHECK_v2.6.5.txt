@@ -1,0 +1,14 @@
+ClipShelf v2.6.5 source check
+=============================
+
+- Core/UI versions advanced to 2.6.5.
+- TextProbe version advanced to 0.1.5.
+- Removed all compile-time LegacyIAccessiblePattern wrapper references.
+- Legacy bridge evidence is now diagnostic-by-supported-pattern-name only.
+- Direct raw MSAA/IA2 remains deferred to Probe 2.
+- Permanent build failure filename standardized to BUILD失敗_把這個傳給ChatGPT.txt.
+- BUILD_EXE.cmd sets UTF-8 code page before using the Chinese filename.
+- DEVELOPMENT_HISTORY.md records the v2.6.4 real compile errors and the permanent filename invariant.
+- Normal ClipShelf behavior remains unchanged.
+
+Model-side limitation: no Windows .NET 8/WPF/UIAutomation compiler/runtime is available here; user Windows build remains required.

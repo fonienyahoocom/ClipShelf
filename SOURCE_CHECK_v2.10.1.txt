@@ -1,0 +1,41 @@
+﻿ClipShelf v2.10.1 SOURCE CHECK — Import Preview / Content Dedup
+
+Base: ClipShelf v2.10.0 backup/import package.
+Validation level: static/source/package only here; Windows .NET 8/WPF build/runtime are NOT claimed.
+
+INTENDED CHANGES
+- ClipShelf/BackupService.cs
+  - AnalyzeImport read-only preview.
+  - portable content fingerprints for Text/Image/Files/directories.
+  - Import now accepts an approved item-ID set and extracts only approved items.
+- ClipShelf/ImportPreviewDialog.xaml + .xaml.cs (new)
+- ClipShelf/MainWindow.xaml / .xaml.cs
+  - backup tooltip/menu wording.
+  - preview-first import flow.
+- ClipShelf/ClipShelf.csproj + ClipShelf.Core/ClipShelf.Core.csproj: version metadata -> 2.10.1.
+- BUILD_EXE.ps1/cmd package labels.
+- README / DEVELOPMENT_HISTORY.
+
+DATA SAFETY CHECKS
+- AnalyzeImport does not call HistoryStore save methods.
+- AnalyzeImport does not call ExtractFile / ExtractDirectory and does not create storage/imports directories.
+- Duplicate IDs are excluded before content hashing of backup items.
+- Duplicate content is excluded from default approved IDs.
+- Uncertain items require explicit user opt-in.
+- Actual Import still stages under storage/imports and MainWindow still requires SaveNowChecked before success.
+- Pre-commit failure path still restores previous in-memory items/folders/settings and discards this import payload.
+
+DEDUP MODEL
+- Text: full text SHA-256.
+- Image: actual bytes SHA-256.
+- File: top-level filename + actual bytes SHA-256.
+- Directory: deterministic hash of relative directory/file paths + file content hashes.
+- Multi-file ClipItem: order-independent sorted component fingerprints.
+
+WINDOWS TEST GATE
+1. BUILD_EXE.cmd -> BUILD SUCCESS.
+2. Start and confirm existing History remains.
+3. Export current dataset; immediately import same backup: preview must not offer all records as new.
+4. Test a backup containing some known duplicates and at least one new Text/Image/File/folder.
+5. Confirm preview counts, then import and verify only new approved content is added.
+6. Re-import the same backup and verify it produces no additional duplicates.

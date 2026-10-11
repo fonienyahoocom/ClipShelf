@@ -1,0 +1,25 @@
+<Window x:Class="ClipShelf.FolderPickerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="選擇 ClipShelf 資料夾" Width="430" Height="250"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="#F8FAFC" ShowInTaskbar="False">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="要放到哪個資料夾？" FontSize="20" FontWeight="SemiBold" Foreground="#172033"/>
+            <TextBlock Text="檔案會複製進 ClipShelf 的儲存位置，並歸到你選的資料夾。" Margin="0,5,0,0" FontSize="12" Foreground="#64748B" TextWrapping="Wrap"/>
+        </StackPanel>
+        <ComboBox x:Name="FolderBox" Grid.Row="2" Height="38" FontSize="14" VerticalContentAlignment="Center"/>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Width="92" Height="36" Margin="0,0,10,0" Content="取消" Click="Cancel_Click"/>
+            <Button Width="92" Height="36" Content="選擇" IsDefault="True" Click="Choose_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

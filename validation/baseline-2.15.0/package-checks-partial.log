@@ -1,0 +1,14 @@
+PASS: ClipShelf.exe is native Windows x64 PE
+PASS: ClipShelf.exe version resources match 2.15.0
+PASS: ui/ClipShelf.UI.exe is native Windows x64 PE
+PASS: ui/ClipShelf.UI.exe version resources match 2.15.0
+PASS: Setup is amd64 Unicode NSIS PE
+PASS: Setup version resources match 2.15.0
+PASS: compiled WPF About text identifies 2.15.0
+PASS: compiled Core crash text identifies 2.15.0
+PASS: ClipShelf bundles runtime 8.0.31
+PASS: ClipShelf includes required runtime bytes
+PASS: ClipShelf.UI bundles runtime 8.0.31
+PASS: ClipShelf.UI includes required runtime bytes
+PASS: WPF managed/native runtime included
+PASS: complete self-contained payload present

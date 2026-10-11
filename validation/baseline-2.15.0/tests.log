@@ -1,0 +1,66 @@
+PASS: corrupt startup preserves bytes and fails closed
+PASS: write cannot replace unreadable state
+PASS: recapture deleted text creates visible active item
+PASS: background overflow soft deletes and retains attachment
+PASS: overflow keeps favorites
+PASS: manual backup includes attachments
+PASS: controlled restore preserves metadata and classification
+PASS: restore recreates missing file with exact text
+PASS: restore recreates missing image with exact bytes
+PASS: repeat import deduplicates IDs
+PASS: automatic backup accepted by normal import and restores all items
+PASS: automatic backup retains new metadata
+PASS: timed pause resumes after deadline in background
+PASS: atomic saves retain previous state and rolling snapshot
+PASS: compact view notifies existing card and preview height
+PASS: unchanged compact view emits no redundant notifications
+PASS: expanded long text stays expanded across A/B switch
+PASS: inline draft stays separate from saved body and can show multiline text
+PASS: background serialization excludes draft and card-only presentation state
+PASS: cancel draft keeps original text and copy count
+PASS: body edit preserves identity, manual title, placement and dates
+PASS: changed body gets canonical content hash and starts new repeat count
+PASS: checked persistence stores changed body and existing compact setting
+PASS: background recapture deduplicates edited content and increments new count
+PASS: recapture of old content creates its own record after edit
+PASS: saving an unchanged body preserves repeat count
+PASS: edit collision is rejected without silently merging records or changing counts
+PASS: empty-body edit is rejected without deleting the record
+PASS: failed checked body write rolls back all changed model fields
+PASS: inline rename changes only the existing Title field
+PASS: renamed title and body survive a real disk reload
+PASS: failed checked title write retains the original title
+PASS: blank title restores automatic heading without clearing body
+PASS: deleted duplicate does not block an active edit or revive deleted data
+PASS: deleted record cannot be renamed until restored
+PASS: new installs default A and existing B setting survives clone and reload
+PASS: entering body edit notifies the direct native TextBox read-only binding
+PASS: unchanged editor state and binding echo emit no redundant target updates
+PASS: native edit binding stores a draft without changing or serializing the original body
+PASS: ending editing restores read-only content and original body
+PASS: picker uses real recent history and excludes deleted/pending/non-history records
+PASS: picker opens newest first
+PASS: picker multilingual case-insensitive AND search
+PASS: picker custom title searchable
+PASS: picker file paths searchable
+PASS: picker empty search results are safe
+PASS: usage updates do not reorder an open picker
+PASS: picker navigation and search preserve manager drafts, selection and A/B state
+PASS: live capture appended without moving existing selected rows
+PASS: live deletion removes unavailable picker row
+PASS: reopen refreshes recent ordering
+PASS: large history projection bounded at 1000 results
+PASS: search reaches records beyond displayed projection
+PASS: hidden picker cannot paste
+PASS: session retains original target with process identity
+PASS: repeated Enter cannot start duplicate paste
+PASS: Esc/hide invalidates paste entry without clipboard operation
+PASS: reopen accepts a fresh target after previous paste
+PASS: picker geometry persisted alongside unchanged A/B setting
+PASS: alternative global hotkey survives clone and serialization
+PASS: legacy settings acquire Ctrl+tilde without Ctrl+Shift+F8
+PASS: Core uses persisted WPF hotkey source of truth
+PASS: Core setting update preserves picker fields and history
+PASS: Core rejects prohibited Ctrl+Shift+F8 setting and restores default
+UNVERIFIED: 4 production IPC checks blocked by host socket permission: AccessDenied
+PASSED 64 CHECKS; runtime/blocked checks reported separately above

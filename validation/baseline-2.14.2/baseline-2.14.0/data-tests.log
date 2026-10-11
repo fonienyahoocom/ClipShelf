@@ -1,0 +1,15 @@
+PASS: corrupt startup preserves bytes and fails closed
+PASS: write cannot replace unreadable state
+PASS: recapture deleted text creates visible active item
+PASS: background overflow soft deletes and retains attachment
+PASS: overflow keeps favorites
+PASS: manual backup includes attachments
+PASS: controlled restore preserves metadata and classification
+PASS: restore recreates missing file with exact text
+PASS: restore recreates missing image with exact bytes
+PASS: repeat import deduplicates IDs
+PASS: automatic backup accepted by normal import and restores all items
+PASS: automatic backup retains new metadata
+PASS: timed pause resumes after deadline in background
+PASS: atomic saves retain previous state and rolling snapshot
+ALL 14 CHECKS PASSED

@@ -1,0 +1,12 @@
+{
+  "baseline_version": "2.15.0",
+  "official_drive_source_id": "1yvZJ0PSgGOeAeaNfvIJx0t69V6UZ6tFQ",
+  "verified_source_zip_size_bytes": 516191,
+  "verified_source_zip_sha256": "505ec65ff91e4ab7da42b16ca36d0d8ba91249227adaf3364d129c16ceb6286a",
+  "latest_folder_checked": "2026-10-11 UTC",
+  "patch_version": "2.15.1",
+  "github_identity": "fonienyahoocom",
+  "accessible_private_repository": "fonienyahoocom/ai-library",
+  "clipshelf_repository": null,
+  "chat_build_ready": false
+}

@@ -1,0 +1,21 @@
+Command line defined: "PAYLOAD_DIR=/workspace/scratch/8ececefb25be/work/ClipShelf-2.14.1/ClipShelf_READY"
+Command line defined: "OUTPUT_FILE=/workspace/scratch/8ececefb25be/deliverables/ClipShelf-2.14.1-Setup.exe"
+Processing script file: "installer/ClipShelf.nsi" (UTF8)
+
+Processed 1 file, writing output (amd64-unicode):
+
+Output: "/workspace/scratch/8ececefb25be/deliverables/ClipShelf-2.14.1-Setup.exe"
+Install: 4 pages (256 bytes), 3 sections (1 required) (12360 bytes), 1409 instructions (39452 bytes), 505 strings (21242 bytes), 1 language table (302 bytes).
+Uninstall: 2 pages (192 bytes), 1 section (4120 bytes), 1047 instructions (29316 bytes), 1068 strings (75262 bytes), 1 language table (254 bytes).
+Datablock optimizer saved 164916 KiB (~50.2%).
+
+Using lzma (compress whole) compression.
+
+EXE header size:              120832 / 101888 bytes
+Install code:                          (67976 bytes)
+Install data:                          (167118614 bytes)
+Uninstall code+data:                   (150125 bytes)
+Compressed data:            49610673 / 167336715 bytes
+CRC (0x387504B1):                  4 / 4 bytes
+
+Total size:                 49731509 / 167438607 bytes (29.7%)

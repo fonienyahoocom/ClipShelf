@@ -1,0 +1,62 @@
+<Window x:Class="ClipShelf.QuickPickerWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="ClipShelf · 快捷選取" Width="440" Height="570" MinWidth="340" MinHeight="320"
+ Background="#F8FAFC" ShowInTaskbar="False" ResizeMode="CanResizeWithGrip"
+ WindowStartupLocation="Manual" PreviewKeyDown="Picker_KeyDown" PreviewTextInput="Picker_TextInput">
+ <Window.Resources>
+  <Style TargetType="ListBoxItem">
+   <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+   <Setter Property="Padding" Value="10,6"/>
+   <Setter Property="Margin" Value="0,1"/>
+   <Setter Property="Background" Value="Transparent"/>
+   <Setter Property="Foreground" Value="#16202A"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+    <Border x:Name="Row" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+     <ContentPresenter/>
+    </Border>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="Background" Value="#E7F4F1"/></Trigger>
+     <Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="#CCFBF1"/></Trigger>
+     <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="#0D9488"/><Setter TargetName="Row" Property="BorderThickness" Value="1"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
+ </Window.Resources>
+ <Grid>
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <DockPanel Background="#0F766E" Margin="0" LastChildFill="True">
+   <Button DockPanel.Dock="Right" Content="完整管理 ↗" Click="Manage_Click" Margin="8" Padding="8,4" Background="#DFF2EF"/>
+   <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,4">
+    <ComboBox x:Name="ScopeBox" Width="115" MaxDropDownHeight="350" DisplayMemberPath="Label" SelectionChanged="Scope_Changed" ToolTip="選擇快捷清單來源；預設歷史"/>
+    <CheckBox x:Name="KeepOpen" Content="保持開啟" Foreground="White" Margin="8,0,0,0" VerticalAlignment="Center" Click="KeepOpen_Click" ToolTip="勾選：點外不收合；Enter 貼上與 Esc 仍會收合"/>
+   </StackPanel>
+  </DockPanel>
+  <TextBox Grid.Row="1" x:Name="Search" Margin="10,9" Padding="8,6" FontSize="14" TextChanged="Search_Changed" ToolTip="直接輸入搜尋；↑↓選取、Enter貼上"/>
+  <ListBox Grid.Row="2" x:Name="Rows" Margin="6,0" BorderThickness="0" Background="Transparent"
+   SelectionMode="Extended" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+   ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+   SelectionChanged="Rows_SelectionChanged" MouseDoubleClick="Rows_DoubleClick" PreviewMouseRightButtonDown="Rows_RightClick">
+   <ListBox.ContextMenu><ContextMenu><MenuItem Header="移到最近刪除（可恢復）" Click="DeleteSelected_Click"/></ContextMenu></ListBox.ContextMenu>
+   <ListBox.ItemTemplate><DataTemplate>
+    <Grid Height="36" ToolTip="{Binding Preview}">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions>
+     <Grid><TextBlock Text="{Binding Glyph}" FontSize="19" VerticalAlignment="Center"/><Image Source="{Binding Thumbnail}" Width="28" Height="28" Stretch="Uniform"/></Grid>
+     <StackPanel Grid.Column="1" VerticalAlignment="Center">
+      <TextBlock Text="{Binding Summary}" TextTrimming="CharacterEllipsis" FontSize="13.5"/>
+      <TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis" FontSize="10.5" Foreground="#708090"/>
+     </StackPanel>
+     <Button Grid.Column="2" Content="×" ToolTip="將這筆移到最近刪除（可恢復）" PreviewMouseLeftButtonDown="Delete_MouseDown" Click="DeleteRow_Click" Padding="2" BorderThickness="0" Background="Transparent" Foreground="#708090"/>
+    </Grid>
+   </DataTemplate></ListBox.ItemTemplate>
+  </ListBox>
+  <StackPanel Grid.Row="3" Margin="12,8,12,12">
+   <DockPanel x:Name="BatchActions" Visibility="Collapsed" Margin="0,0,0,5">
+    <Button DockPanel.Dock="Right" Content="刪除選取" Click="DeleteSelected_Click" Padding="6,2"/>
+    <TextBlock x:Name="SelectionCount" Foreground="#0F766E" VerticalAlignment="Center"/>
+   </DockPanel>
+   <TextBlock x:Name="Status" Foreground="#0F766E" TextWrapping="Wrap" FontSize="12"/>
+   <TextBlock Text="Shift/Ctrl＋點選 多選 · Delete 刪除 · Enter 貼上 · Esc 收合 · F3 預覽" FontSize="10.5" Foreground="#708090" Margin="0,4,0,0"/>
+  </StackPanel>
+ </Grid>
+</Window>

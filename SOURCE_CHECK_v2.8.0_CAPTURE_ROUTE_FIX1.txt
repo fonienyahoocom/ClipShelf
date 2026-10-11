@@ -1,0 +1,11 @@
+﻿ClipShelf v2.8.0 Experimental - Capture Route Fix 1
+
+Static source checks:
+- Bubble menu no longer launches tools\ClipShelf.TextProbe.exe.
+- Bubble label is β 指向擷取（Experimental）.
+- Core routes the request through Local\ClipShelf.Core.UiStartExperimentalCapture.
+- WPF CoreBridge listens for the same named event.
+- The WPF UI reuses RunExperimentalPointerCaptureAsync for both the header β button and the bubble request.
+- Runtime helper path remains READY\experimental\ClipShelf.ExperimentalCapture.exe.
+- No OCR, IA2/MSAA, cloud API, geometry, or program-specific fallback was added.
+- Windows WPF build cannot be executed in this environment; BUILD_EXE.cmd on the user's Windows machine remains the build authority.

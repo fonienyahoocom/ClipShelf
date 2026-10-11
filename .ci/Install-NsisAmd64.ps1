@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Path $temp -Force | Out-Null
 $deb = Join-Path $temp 'nsis-common_3.11-1_all.deb'
 Invoke-WebRequest -Uri $url -OutFile $deb
 if ((Get-FileHash $deb -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'NSIS dependency SHA256 mismatch' }
-& $SevenZip x $deb "-o$temp" -y
+& $SevenZip x $deb -tAr "-o$temp" -y
 if ($LASTEXITCODE -ne 0) { throw 'NSIS deb extraction failed' }
 & $SevenZip x (Join-Path $temp 'data.tar.xz') "-o$temp" -y
 if ($LASTEXITCODE -ne 0) { throw 'NSIS xz extraction failed' }

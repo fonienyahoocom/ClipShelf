@@ -17,6 +17,9 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 25
     steps:
+      - name: Preserve exact source line endings
+        shell: pwsh
+        run: git config --global core.autocrlf false
       - name: Checkout exact source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified 2026-10-11
         with:
@@ -44,6 +47,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'pefile install failed' }
           choco install nsis --version=3.11 -y --no-progress
           if ($LASTEXITCODE -notin 0,3010) { throw 'NSIS install failed' }
+          ./.ci/Install-NsisAmd64.ps1 -NsisDirectory (Join-Path ${env:ProgramFiles(x86)} 'NSIS') -SevenZip (Join-Path $env:ProgramFiles '7-Zip\7z.exe')
       - name: Tests, publish, installer and byte verification
         shell: pwsh
         env:

@@ -7,6 +7,7 @@ using System.IO.Compression;
 var root = Path.Combine(Path.GetTempPath(), "ClipShelfTests-"+Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 int checks = 0;
+Console.WriteLine("CHAT_BUILD_E2E: ClipShelf 2.15.2 source edited through GitHub Connector");
 void Check(bool value, string label) { if (!value) throw new Exception("FAIL: "+label); Console.WriteLine("PASS: "+label); checks++; }
 string State(IEnumerable<ClipItem> items, AppSettings? settings = null) => JsonSerializer.Serialize(new { Items=items.ToList(), Categories = new[]{"AI 用語/測試"}, Settings=settings??new AppSettings { HistoryModelVersion=1 } });
 try {

@@ -26,6 +26,8 @@ def main():
     if version != core_version or ('VIProductVersion "'+version+'.0"') not in (root/'installer/ClipShelf.nsi').read_text():
         raise ValueError('Core/UI/NSIS version mismatch: update all version resources before build.')
     evidence = root/'validation'; evidence.mkdir(exist_ok=True)
+    for name in ('tests.log','publish-core.log','publish-wpf.log','installer-build.log','installer-extraction.log','package-checks.log','package-checks.json','payload-manifest.json','commands.json'):
+        (evidence/name).unlink(missing_ok=True)
     payload = root/'release'
     if payload.exists(): shutil.rmtree(payload)
     payload.mkdir()
@@ -34,12 +36,13 @@ def main():
     commands = []
     def run(command, log):
         commands.append(command)
+        (evidence/'commands.json').write_text(json.dumps(commands,ensure_ascii=False,indent=2,default=str)+'\n',encoding='utf-8')
         print('Running: '+str(command[0])+' '+str(command[1]), flush=True)
         with (evidence/log).open('w', encoding='utf-8') as stream:
             subprocess.run([str(x) for x in command], cwd=root, env=env, stdout=stream, stderr=subprocess.STDOUT, check=True)
     run([args.dotnet,'run','--project',root/'Tests/Tests.csproj','-c','Release'], 'tests.log')
     for project, target, log in [('ClipShelf.Core/ClipShelf.Core.csproj',payload,'publish-core.log'),('ClipShelf/ClipShelf.csproj',payload/'ui','publish-wpf.log')]:
-        run([args.dotnet,'publish',root/project,'-c','Release','-r','win-x64','--self-contained','true','-p:EnableWindowsTargeting=true','-o',target],log)
+        run([args.dotnet,'publish',root/project,'-c','Release','-r','win-x64','--self-contained','true','-p:EnableWindowsTargeting=true','-p:IncludeSourceRevisionInInformationalVersion=false','-o',target],log)
     for name in ('README.txt','DEVELOPMENT_HISTORY.md','Diagnostics/Measure-Wake.ps1'):
         file=root/name
         if file.exists(): shutil.copy2(file,payload/file.name)
@@ -53,7 +56,7 @@ def main():
     setup=output/f'ClipShelf-{version}-Setup.exe'
     if setup.exists(): raise FileExistsError('Refusing to overwrite previous installer: '+str(setup))
     prefix='/' if platform.system()=='Windows' else '-'
-    run([args.makensis,prefix+'DPAYLOAD_DIR='+str(payload),prefix+'DOUTPUT_FILE='+str(setup),root/'installer/ClipShelf.nsi'],'installer-build.log')
+    run([args.makensis,prefix+'INPUTCHARSET','UTF8',prefix+'DPAYLOAD_DIR='+str(payload),prefix+'DOUTPUT_FILE='+str(setup),root/'installer/ClipShelf.nsi'],'installer-build.log')
     extracted=output/f'installer-payload-{version}'
     if extracted.exists(): raise FileExistsError(str(extracted))
     run([args.sevenzip,'x',setup,'-o'+str(extracted),'-y'],'installer-extraction.log')

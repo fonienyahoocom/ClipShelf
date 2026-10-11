@@ -75,7 +75,7 @@ Section "ClipShelf 主程式（必要）" SEC_MAIN
   SetOutPath "$INSTDIR"
   SetOverwrite on
   ClearErrors
-  File /r "${PAYLOAD_DIR}/*"
+  File /r "${PAYLOAD_DIR}\*"
   ${If} ${Errors}
     MessageBox MB_ICONSTOP "有程式檔無法更新。請確認程式已退出、磁碟空間足夠，再重新執行安裝。個人資料未被移除。"
     SetErrorLevel 3

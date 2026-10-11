@@ -1,6 +1,6 @@
 """Complete the Actions artifact with provenance and actual-byte hashes."""
 from pathlib import Path
-import json, hashlib, os, shutil
+import json, hashlib, os, shutil, subprocess
 root=Path(__file__).resolve().parent
 out=root/'out'
 receipts=list(out.glob('ClipShelf-*-BuildReceipt.json'))
@@ -10,6 +10,7 @@ version=receipt['version']
 tests=(root/'validation/tests.log').read_text(encoding='utf-8')
 package=json.loads((root/'validation/package-checks.json').read_text(encoding='utf-8'))
 provenance={key:os.environ.get(key) for key in ('GITHUB_REPOSITORY','GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REF','RUNNER_OS')}
+provenance['SOURCE_COMMIT'] = subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
 shutil.copy2(root/'README.txt',out/f'ClipShelf-{version}-使用說明.txt')
 notes=out/f'ClipShelf-{version}-更新說明與測試結果.md'
 notes.write_text(f'# ClipShelf {version} Windows Runner build\n\nBuild/Package PASS; native GUI UNVERIFIED.\n\n'+json.dumps(provenance,ensure_ascii=False,indent=2)+'\n\n'+tests+f'\nOffline package checks: {package["checks_passed"]}\n',encoding='utf-8')

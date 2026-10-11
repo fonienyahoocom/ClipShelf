@@ -17,6 +17,10 @@ if ($LASTEXITCODE -ne 0) { throw 'NSIS xz extraction failed' }
 if ($LASTEXITCODE -ne 0) { throw 'NSIS tar extraction failed' }
 $data = Join-Path $temp 'usr\share\nsis'
 Copy-Item (Join-Path $data 'Stubs\*-amd64-unicode') (Join-Path $NsisDirectory 'Stubs') -Force
+# Debian uses an underscore in solid stub names; upstream Windows may omit it.
+foreach ($compressor in @('zlib','bzip2','lzma')) {
+    Copy-Item (Join-Path $NsisDirectory "Stubs\${compressor}_solid-amd64-unicode") (Join-Path $NsisDirectory "Stubs\${compressor}solid-amd64-unicode") -Force
+}
 $plugins = Join-Path $NsisDirectory 'Plugins\amd64-unicode'
 New-Item -ItemType Directory -Path $plugins -Force | Out-Null
 Copy-Item (Join-Path $data 'Plugins\amd64-unicode\*.dll') $plugins -Force

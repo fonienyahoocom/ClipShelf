@@ -42,7 +42,7 @@ def main():
             subprocess.run([str(x) for x in command], cwd=root, env=env, stdout=stream, stderr=subprocess.STDOUT, check=True)
     run([args.dotnet,'run','--project',root/'Tests/Tests.csproj','-c','Release'], 'tests.log')
     for project, target, log in [('ClipShelf.Core/ClipShelf.Core.csproj',payload,'publish-core.log'),('ClipShelf/ClipShelf.csproj',payload/'ui','publish-wpf.log')]:
-        run([args.dotnet,'publish',root/project,'-c','Release','-r','win-x64','--self-contained','true','-p:EnableWindowsTargeting=true','-o',target],log)
+        run([args.dotnet,'publish',root/project,'-c','Release','-r','win-x64','--self-contained','true','-p:EnableWindowsTargeting=true','-p:IncludeSourceRevisionInInformationalVersion=false','-o',target],log)
     for name in ('README.txt','DEVELOPMENT_HISTORY.md','Diagnostics/Measure-Wake.ps1'):
         file=root/name
         if file.exists(): shutil.copy2(file,payload/file.name)

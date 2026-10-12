@@ -180,6 +180,10 @@ try {
     var protectedPin=corePinRows.Single(x=>x!["Id"]!.GetValue<Guid>()==corePin.Id)!;
     Check(protectedPin["IsDeleted"]!.GetValue<bool>()==false && protectedPin["HistoryVisible"]!.GetValue<bool>(), "Core overflow preserves pinned record in History");
     Check(corePinRows.Count(x=>x?["IsDeleted"]?.GetValue<bool>() != true && x?["PinnedAt"] == null && x?["HistoryVisible"]?.GetValue<bool>() == true)==1, "Core cap continues applying to ordinary unpinned history");
+    Check(InlineEditDismissal.ShouldBlockOutsideHide(1,false), "ordinary menu still blocks outside hide");
+    Check(!InlineEditDismissal.ShouldBlockOutsideHide(1,true), "inline title or body draft does not block outside hide");
+    Check(InlineEditDismissal.ShouldBlockOutsideHide(2,true), "inline context menu still blocks outside hide");
+    Check(!InlineEditDismissal.ShouldBlockOutsideHide(0,false), "no suspension allows outside hide");
     var session=new PickerSession();
     Check(!session.TryBeginPaste(), "hidden picker cannot paste");session.Open(123,456);
     Check(session.Target==123 && session.TargetPid==456 && session.Visible, "session retains original target with process identity");

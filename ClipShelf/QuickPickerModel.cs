@@ -10,7 +10,13 @@ internal sealed class QuickPickerModel
 {
     private List<ClipItem> _snapshot = new();
     public void Open(IEnumerable<ClipItem> items) => _snapshot = items
-        .Where(Eligible).OrderByDescending(x => x.LastUsedAt).ToList();
+        .Where(Eligible).OrderByDescending(x => x.IsPinned)
+        .ThenByDescending(x => x.IsPinned ? x.PinnedAt : x.LastUsedAt)
+        .ThenByDescending(x => x.LastUsedAt).ToList();
+    // Explicit pin/unpin may reorder; normal captures and use counts preserve open-session order.
+    public void ReorderPins() => _snapshot = _snapshot.OrderByDescending(x => x.IsPinned)
+        .ThenByDescending(x => x.IsPinned ? x.PinnedAt : x.LastUsedAt)
+        .ThenByDescending(x => x.LastUsedAt).ToList();
     public void Synchronize(IEnumerable<ClipItem> items)
     {
         var live = items.Where(Eligible).ToDictionary(x => x.Id);
@@ -28,6 +34,19 @@ internal sealed class QuickPickerModel
     private static bool Contains(string? text, string word) => (text ?? "").Contains(word, StringComparison.OrdinalIgnoreCase);
     public PickerScope Scope { get; set; } = new("History", "", "歷史");
     private bool Eligible(ClipItem item) => !item.IsDeleted && !item.IsPendingPurge && Scope.Matches(item);
+}
+
+internal static class PickerPinning
+{
+    public static bool Toggle(ClipItem item, Action persist)
+    {
+        if (item.IsDeleted || item.IsPendingPurge) throw new InvalidOperationException("已刪除項目不可釘選。");
+        var previous = item.PinnedAt;
+        item.PinnedAt = previous.HasValue ? null : DateTime.Now;
+        try { persist(); }
+        catch { item.PinnedAt = previous; throw; }
+        return item.IsPinned;
+    }
 }
 
 internal sealed class PickerSession

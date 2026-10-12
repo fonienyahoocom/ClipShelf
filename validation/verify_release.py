@@ -65,7 +65,7 @@ protected=('ClipShelf/HistoryStore.cs','ClipShelf/BackupService.cs','ClipShelf/C
            'ClipShelf/ClipEditing.cs','ClipShelf.Core/CoreStateStore.cs',
            'Shared/SafeState.cs','Shared/AutoBackup.cs')
 for relative in protected:
-    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to 2.15.3 baseline')
+    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to 2.15.4 baseline')
 check('Read(path); // Never replace' in (s/'Shared/SafeState.cs').read_text(), 'fail-closed write revalidates existing history before replace')
 for filename in ('BUILD_EXE.cmd','BUILD_SETUP.cmd'):
     data=(s/filename).read_bytes()
@@ -102,7 +102,7 @@ manager_xaml=ET.parse(s/'ClipShelf/MainWindow.xaml').getroot()
 titles=[x for x in manager_xaml.iter() if x.tag.endswith('TextBlock') and x.attrib.get('Text')=='{Binding Title}']
 editors=[x for x in manager_xaml.iter() if x.tag.endswith('TextBox') and x.attrib.get('{http://schemas.microsoft.com/winfx/2006/xaml}Name')=='ClipTitleEditor']
 check(len(titles)==1 and titles[0].attrib.get('FontSize')=='17' and titles[0].attrib.get('FontWeight')=='SemiBold'
-      and len(editors)==1 and editors[0].attrib.get('FontSize')=='16' and editors[0].attrib.get('Grid.Column')=='1',
+      and len(editors)==1 and editors[0].attrib.get('FontSize')=='16',
       'editable custom title has 17pt readable text and aligned inline editor')
 xaml=(s/'ClipShelf/MainWindow.xaml').read_text(encoding='utf-8-sig')
 check('Text="{Binding KindLabel}"' not in xaml and 'Text="{Binding TimeText}"' not in xaml

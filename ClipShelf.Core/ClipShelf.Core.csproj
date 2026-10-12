@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>2.15.3</Version>
-    <FileVersion>2.15.3.0</FileVersion>
-    <AssemblyVersion>2.15.3.0</AssemblyVersion>
+    <Version>2.15.4</Version>
+    <FileVersion>2.15.4.0</FileVersion>
+    <AssemblyVersion>2.15.4.0</AssemblyVersion>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>

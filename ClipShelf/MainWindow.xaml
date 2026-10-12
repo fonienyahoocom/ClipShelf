@@ -390,7 +390,7 @@
                                                 <Button.Style><Style TargetType="Button"><Style.Triggers>
                                                     <DataTrigger Binding="{Binding Title}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
                                                     <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="IsEnabled" Value="False"/><Setter Property="ToolTip" Value="先從最近刪除復原，再修改標題"/></DataTrigger>
                                                 </Style.Triggers></Style></Button.Style>
                                                 <Border BorderBrush="#0D9488" BorderThickness="2,0,0,0" Padding="8,3" Background="Transparent">
                                                     <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" Foreground="#172033"

@@ -118,7 +118,7 @@ check('Rows.SelectAll()' in picker_code and 'Rows.IsKeyboardFocusWithin' in pick
 check('FloatingIconEnabled' in (s/'ClipShelf/AppSettings.cs').read_text() and 'bubble-visible' in integration and 'SetBubbleEnabled' in core, 'independent floating preference uses sole live state writer')
 check('_visibleItems.Remove(item)' in integration and 'CurrentSection().Kind == "Trash") RefreshVisibleItems();' in integration, 'picker deletion updates active manager projection and existing Trash query without clearing unrelated draft cards')
 test=(s/'validation/tests.log').read_text()
-totals=[int(x) for x in re.findall(r'PASSED (\\d+) CHECKS', test)]
+totals=[int(x) for x in re.findall(r'PASSED (\d+) CHECKS', test)]
 check(bool(totals) and max(totals) >= 86,
       'Windows automated tests retain >=86 baseline checks and include new pin regressions')
 check('pin moves older item to top immediately' in test and 'second click removes pin' in test

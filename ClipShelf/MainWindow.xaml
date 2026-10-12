@@ -353,6 +353,7 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -360,7 +361,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <CheckBox Grid.Row="0" Grid.RowSpan="5" Grid.Column="0" Margin="0,2,10,0" VerticalAlignment="Top"
+                                    <CheckBox Grid.Row="0" Grid.RowSpan="6" Grid.Column="0" Margin="0,2,10,0" VerticalAlignment="Top"
                                               Width="22" Height="22" IsChecked="{Binding IsMarked, Mode=TwoWay}"
                                               Visibility="{Binding ShowSelector, Converter={StaticResource BoolToVisibility}}"
                                               Tag="{Binding}" ToolTip="選取這筆" Click="ItemMark_Click"/>
@@ -390,29 +391,14 @@
                                         <Border Grid.Column="1" Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="7,2" Margin="0,0,7,0">
                                             <TextBlock Text="{Binding KindLabel}" Foreground="#475569" FontSize="10.5" FontWeight="SemiBold"/>
                                         </Border>
-                                        <Grid Grid.Column="2" MaxWidth="190" VerticalAlignment="Center">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/></Grid.ColumnDefinitions>
-                                            <TextBlock TextTrimming="CharacterEllipsis" Text="{Binding CardHeading}" ToolTip="{Binding CardHeading}"
-                                                       FontWeight="SemiBold" Foreground="#64748B" FontSize="11" VerticalAlignment="Center">
-                                                <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
-                                                </Style.Triggers></Style></TextBlock.Style>
-                                            </TextBlock>
-                                            <TextBox x:Name="ClipTitleEditor" Text="{Binding DraftTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                     MinWidth="0" MaxWidth="170" FontSize="11" Padding="2,0" AcceptsReturn="False"
-                                                     ToolTip="Enter 儲存 · Esc 取消 · 空白恢復自動標題" ContextMenuOpening="InlineTitle_ContextMenuOpening">
-                                                <TextBox.Style><Style TargetType="TextBox"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
-                                                </Style.Triggers></Style></TextBox.Style>
-                                            </TextBox>
-                                            <Button Grid.Column="1" Content="✎" Tag="{Binding}" Padding="0" Width="18" Height="20"
-                                                    Background="Transparent" BorderThickness="0" Foreground="#64748B" ToolTip="重新命名標題" Click="RenameTitle_Click">
-                                                <Button.Style><Style TargetType="Button"><Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsPendingPurge}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
-                                                </Style.Triggers></Style></Button.Style>
-                                            </Button>
-                                        </Grid>
+                                        <Button Grid.Column="2" Content="✎ 標題" Tag="{Binding}" Padding="4,1" Margin="0,0,4,0" HorizontalAlignment="Left"
+                                                FontSize="11" Foreground="#64748B" Background="Transparent" BorderThickness="0"
+                                                ToolTip="新增或修改醒目的自訂標題" Click="RenameTitle_Click">
+                                            <Button.Style><Style TargetType="Button"><Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                <DataTrigger Binding="{Binding IsPendingPurge}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                            </Style.Triggers></Style></Button.Style>
+                                        </Button>
                                         <StackPanel Grid.Column="3" Orientation="Horizontal">
                                         <TextBlock Text="  ·  " Foreground="#CBD5E1" FontSize="11" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding TimeText}" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
@@ -425,10 +411,31 @@
                                         </StackPanel>
                                     </Grid>
 
+                                    <!-- Dedicated custom title line. No extra height for cards without titles. -->
+                                    <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,1" Padding="10,6"
+                                            Background="#EFFBF8" BorderBrush="#0D9488" BorderThickness="3,0,0,0" CornerRadius="5">
+                                        <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Visible"/><Style.Triggers>
+                                            <DataTrigger Binding="{Binding Title}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                        </Style.Triggers></Style></Border.Style>
+                                        <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="Bold" Foreground="#172033"
+                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/>
+                                    </Border>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" x:Name="ClipTitleEditor"
+                                             Text="{Binding DraftTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             HorizontalAlignment="Stretch" Margin="0,8,0,1" Padding="9,5" FontSize="17" FontWeight="SemiBold"
+                                             Foreground="#172033" Background="#F0FDFA" BorderBrush="#0D9488" BorderThickness="1"
+                                             AcceptsReturn="False" ToolTip="Enter 儲存 · Esc 取消 · 點到其他程式會保留草稿並縮起"
+                                             ContextMenuOpening="InlineTitle_ContextMenuOpening">
+                                        <TextBox.Style><Style TargetType="TextBox"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                        </Style.Triggers></Style></TextBox.Style>
+                                    </TextBox>
+
                                     <!-- The right-side blank area is card chrome, separate from selectable text.
                                          Ctrl/Shift clicks use Windows-style multi-select; an ordinary click on an
                                          expanded card can still collapse it without stealing text selection. -->
-                                    <Border Grid.Row="1" Grid.RowSpan="3" Grid.Column="2" Background="Transparent"
+                                    <Border Grid.Row="2" Grid.RowSpan="3" Grid.Column="2" Background="Transparent"
                                             Margin="10,4,0,0" Tag="{Binding}" Cursor="Hand"
                                             ToolTip="右側空白：Ctrl 單選／Shift 連選；展開時一般點擊可收起"
                                             MouseLeftButtonDown="CollapseContentBlankArea_MouseLeftButtonDown"/>
@@ -484,7 +491,7 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <WrapPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0"
+                                    <WrapPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0"
                                                 Visibility="{Binding IsInlineEditing, Converter={StaticResource BoolToVisibility}}">
                                         <TextBlock Foreground="#0F766E" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="編輯文字中 · Ctrl+Enter 儲存 · Esc 取消"/>
@@ -497,7 +504,7 @@
                                                 Background="#F8FAFC" BorderBrush="#E2E8F0" Foreground="#64748B"/>
                                     </WrapPanel>
 
-                                    <TextBox x:Name="ClipSelectableText" Grid.Row="2" Grid.Column="1" Text="{Binding EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox x:Name="ClipSelectableText" Grid.Row="3" Grid.Column="1" Text="{Binding EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                              IsReadOnly="{Binding IsTextReadOnly}"
                                              IsReadOnlyCaretVisible="True" AcceptsReturn="True" IsUndoEnabled="True"
                                              BorderThickness="0" Padding="0"
@@ -529,12 +536,12 @@
                                             </Style>
                                         </TextBox.Style>
                                     </TextBox>
-                                    <Button Grid.Row="3" Grid.Column="1" Content="收起 ↑" Tag="{Binding}" HorizontalAlignment="Left"
+                                    <Button Grid.Row="4" Grid.Column="1" Content="收起 ↑" Tag="{Binding}" HorizontalAlignment="Left"
                                             Margin="0,6,0,0" Padding="8,3" FontSize="10.5" Foreground="#0F766E" Background="#F0FDFA"
                                             BorderBrush="#99F6E4" BorderThickness="1" Cursor="Hand"
                                             Visibility="{Binding IsContentExpanded, Converter={StaticResource BoolToVisibility}}"
                                             ToolTip="收起完整內容預覽" Click="CollapseContentButton_Click"/>
-                                    <StackPanel Grid.Row="4" Grid.Column="1"><TextBlock Text="{Binding SearchExcerpt}" TextWrapping="Wrap" MaxHeight="44" Foreground="#0F766E" FontSize="12" Margin="0,5,0,0"/>
+                                    <StackPanel Grid.Row="5" Grid.Column="1"><TextBlock Text="{Binding SearchExcerpt}" TextWrapping="Wrap" MaxHeight="44" Foreground="#0F766E" FontSize="12" Margin="0,5,0,0"/>
                                     <Image Grid.Column="1" Source="{Binding PreviewImage}" MaxHeight="180" MaxWidth="280" Stretch="Uniform" HorizontalAlignment="Left" Margin="0,8,0,0"/></StackPanel>
                                 </Grid>
                             </DataTemplate>

@@ -59,7 +59,7 @@
     <TextBlock x:Name="SelectionCount" Foreground="#0F766E" VerticalAlignment="Center"/>
    </DockPanel>
    <TextBlock x:Name="Status" Foreground="#0F766E" TextWrapping="Wrap" FontSize="12"/>
-   <TextBlock Text="📌 釘選置頂／再按取消 · Shift/Ctrl 多選 · Delete 刪除 · Enter 貼上 · Esc 收合 · F3 預覽" TextWrapping="Wrap" FontSize="10.5" Foreground="#708090" Margin="0,4,0,0"/>
+   <TextBlock Text="Tab 切完整管理 · 📌 釘選／取消 · Shift/Ctrl 多選 · Delete 刪除 · Enter 貼上 · Esc 收合 · F3 預覽" TextWrapping="Wrap" FontSize="10.5" Foreground="#708090" Margin="0,4,0,0"/>
   </StackPanel>
  </Grid>
 </Window>

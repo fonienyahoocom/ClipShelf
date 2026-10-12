@@ -77,6 +77,11 @@ internal sealed class CoreStateStore
     public void SetFloatingIconEnabled(bool value)
     { lock (_sync) { Settings["FloatingIconEnabled"] = value; SaveLocked(); } }
 
+    public bool PreferQuickPicker
+    {
+        get { lock (_sync) return GetBool(Settings, "PreferQuickPicker", true); }
+    }
+
     public bool SwitchNonInterferenceMode
     {
         get { lock (_sync) return GetBool(Settings, "SwitchNonInterferenceMode", false); }

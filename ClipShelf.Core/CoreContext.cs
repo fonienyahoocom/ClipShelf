@@ -21,6 +21,8 @@ internal sealed class CoreContext : ApplicationContext
     private readonly BubbleForm _bubble;
     private readonly NotifyIcon _trayIcon;
     private readonly ToolStripMenuItem _pauseItem;
+    private readonly ToolStripMenuItem _quickLaunchItem;
+    private readonly ToolStripMenuItem _manageLaunchItem;
     private readonly ToolStripMenuItem _normalModeItem;
     private readonly ToolStripMenuItem _nonInterferenceModeItem;
     private readonly Control _dispatcher;
@@ -121,8 +123,8 @@ internal sealed class CoreContext : ApplicationContext
         };
 
         var menu = new ContextMenuStrip();
-        var open = new ToolStripMenuItem("開啟完整管理");
-        var quick = new ToolStripMenuItem("開啟快捷選取");
+        var open = _manageLaunchItem = new ToolStripMenuItem("開啟完整管理");
+        var quick = _quickLaunchItem = new ToolStripMenuItem("開啟快捷選取");
         quick.Click += (_, _) => OpenQuick();
         open.Click += (_, _) => OpenUi();
 
@@ -167,7 +169,7 @@ internal sealed class CoreContext : ApplicationContext
 
         UpdateTrayUi();
         ConfigureHotkey();
-        if (!background) Post(OpenQuick);
+        if (!background) Post(() => RequestUi("preferred"));
         else Post(() => RequestUi("resident"));
     }
 
@@ -219,7 +221,7 @@ internal sealed class CoreContext : ApplicationContext
         var now = Stopwatch.GetTimestamp();
         if ((now - _lastQuickRequest) * 1000d / Stopwatch.Frequency < 120) return;
         _lastQuickRequest = now;
-        RequestUi("toggle-quick");
+        RequestUi("toggle-preferred");
     }
     private void OpenQuick() => RequestUi("quick");
     private void OpenUi() => RequestUi("manage");
@@ -279,7 +281,7 @@ internal sealed class CoreContext : ApplicationContext
                 using (process) { try { AllowSetForegroundWindow(process.Id); } catch { } }
             }
             await UiChannel.SendAsync(request);
-            if (request.Command is "quick" or "toggle-quick" or "manage") await UiChannel.SendAsync(new UiRequest("hotkey-status", Message: _hotkeyStatus));
+            if (request.Command is "quick" or "toggle-quick" or "manage" or "toggle-preferred" or "preferred") await UiChannel.SendAsync(new UiRequest("hotkey-status", Message: _hotkeyStatus));
             _uiStarting = false;
         } catch (Exception ex) {
             Post(() => _trayIcon.ShowBalloonTip(8000, "ClipShelf 介面沒有回應", "請從系統匣再試一次；資料未被重設。 " + ex.Message, ToolTipIcon.Warning));
@@ -384,6 +386,12 @@ internal sealed class CoreContext : ApplicationContext
                 ? "ClipShelf - 背景核心（不干擾模式）"
                 : "ClipShelf - 背景核心（一般模式）";
         _pauseItem.Text = paused ? "繼續自動保存" : "暫停自動保存";
+        var preferQuick = _store.PreferQuickPicker;
+        _quickLaunchItem.Text = preferQuick ? "開啟快捷選取  ✓" : "開啟快捷選取";
+        _manageLaunchItem.Text = preferQuick ? "開啟完整管理" : "開啟完整管理  ✓";
+        _quickLaunchItem.AccessibleDescription = preferQuick ? "目前 Ctrl+~ 預設快捷選取" : "選用快捷選取作為預設";
+        _manageLaunchItem.AccessibleDescription = preferQuick ? "選用完整管理作為預設" : "目前 Ctrl+~ 預設完整管理";
+        _bubble.SetPreferredLaunchMode(preferQuick);
         _normalModeItem.Checked = !nonInterference;
         _nonInterferenceModeItem.Checked = nonInterference;
         _bubble.SetNonInterferenceMode(nonInterference);

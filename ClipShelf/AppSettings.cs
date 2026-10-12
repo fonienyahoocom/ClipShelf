@@ -57,6 +57,8 @@ public sealed class AppSettings
     public bool HasMiniPlacement { get; set; }
 
     public bool FloatingIconEnabled { get; set; } = true;
+    // Legacy settings keep Quick Picker as the Ctrl+~ default.
+    public bool PreferQuickPicker { get; set; } = true;
     public bool PickerCloseOnDeactivate { get; set; } = true;
     public double PickerWidth { get; set; } = 440;
     public double PickerHeight { get; set; } = 570;
@@ -69,6 +71,7 @@ public sealed class AppSettings
     public AppSettings Clone() => new()
     {
         FloatingIconEnabled = FloatingIconEnabled,
+        PreferQuickPicker = PreferQuickPicker,
         PickerCloseOnDeactivate = PickerCloseOnDeactivate,
         PickerWidth = PickerWidth, PickerHeight = PickerHeight,
         PickerLeft = PickerLeft, PickerTop = PickerTop, HasPickerPlacement = HasPickerPlacement,

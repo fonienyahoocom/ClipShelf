@@ -23,6 +23,8 @@ internal sealed class BubbleForm : Form
     public event Action<bool>? ModeChangeRequested;
     public event Action<int, int>? PositionCommitted;
 
+    private readonly ToolStripMenuItem _quickLaunchItem;
+    private readonly ToolStripMenuItem _manageLaunchItem;
     private readonly ToolStripMenuItem _normalModeItem;
     private readonly ToolStripMenuItem _nonInterferenceModeItem;
 
@@ -38,8 +40,8 @@ internal sealed class BubbleForm : Form
         DoubleBuffered = true;
 
         var menu = new ContextMenuStrip();
-        var open = new ToolStripMenuItem("開啟快捷選取");
-        var manage = new ToolStripMenuItem("開啟完整管理");
+        var open = _quickLaunchItem = new ToolStripMenuItem("開啟快捷選取");
+        var manage = _manageLaunchItem = new ToolStripMenuItem("開啟完整管理");
         manage.Click += (_, _) => ManageRequested?.Invoke();
         open.Click += (_, _) => OpenRequested?.Invoke();
 
@@ -82,6 +84,14 @@ internal sealed class BubbleForm : Form
         MouseUp += Bubble_MouseUp;
     }
 
+
+    public void SetPreferredLaunchMode(bool quick)
+    {
+        _quickLaunchItem.Text = quick ? "開啟快捷選取  ✓" : "開啟快捷選取";
+        _manageLaunchItem.Text = quick ? "開啟完整管理" : "開啟完整管理  ✓";
+        _quickLaunchItem.AccessibleDescription = quick ? "目前預設 Ctrl+~ 開啟快捷選取" : "選用快捷選取作為預設";
+        _manageLaunchItem.AccessibleDescription = quick ? "選用完整管理作為預設" : "目前預設 Ctrl+~ 開啟完整管理";
+    }
 
     public void SetNonInterferenceMode(bool enabled)
     {

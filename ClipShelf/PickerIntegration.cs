@@ -33,6 +33,15 @@ public partial class MainWindow
             _coreBridge.NotifyStateChanged(); return;
         }
         if (request.Command == "hide") { CloseForTrueHide(); return; }
+        if (request.Command is "preferred" or "toggle-preferred")
+        {
+            var toggle = request.Command == "toggle-preferred";
+            if (_settings.PreferQuickPicker)
+                OpenPicker(toggle, request.Target, request.TargetPid, request.Started);
+            else
+                ToggleManageFromHotkey(toggle, request.Target, request.TargetPid);
+            return;
+        }
         if (request.Command == "quick" || request.Command == "toggle-quick")
         { OpenPicker(request.Command == "toggle-quick", request.Target, request.TargetPid, request.Started); return; }
         if (request.Command == "manage")
@@ -41,6 +50,33 @@ public partial class MainWindow
             ActivateFromCore();
         }
     }
+    private void ToggleManageFromHotkey(bool toggle, long target, int pid)
+    {
+        if (toggle && IsVisible && WindowState != WindowState.Minimized && _picker?.IsVisible != true)
+        { CloseForTrueHide(); return; }
+        if (PickerClipboard.ValidTarget(new IntPtr(target), pid))
+            _previousForegroundWindow = new IntPtr(target);
+        ActivateFromCore();
+    }
+
+    private bool RememberLaunchMode(bool preferQuick)
+    {
+        if (_settings.PreferQuickPicker == preferQuick) return true;
+        var old = _settings.PreferQuickPicker;
+        _settings.PreferQuickPicker = preferQuick;
+        try { QueueSave(); _store.SaveNowChecked(); }
+        catch (Exception ex)
+        {
+            _settings.PreferQuickPicker = old;
+            QueueSave();
+            MessageBox.Show(this, "開啟模式設定尚未儲存，已維持原設定。\n" + ex.Message,
+                "ClipShelf", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+        _coreBridge.NotifyStateChanged();
+        return true;
+    }
+
     private void EnsurePicker()
     {
         _picker ??= new QuickPickerWindow(() => _allItems, () => _settings, QueueSave, ActivateFromCore, CopyForPickerAsync, DeleteForPicker, TogglePinForPicker, () => _folderPaths);
@@ -48,6 +84,7 @@ public partial class MainWindow
     private void OpenPicker(bool toggle = false, long target = 0, int pid = 0, long started = 0)
     {
         if (_allowClose || _suspendAutoHide > 0 || _picker?.IsBusy == true) return;
+        if (!RememberLaunchMode(true)) return;
         EnsurePicker();
         if (toggle && _picker!.IsVisible) { _picker.HidePicker(); return; }
         if (_picker!.IsVisible) { _picker.Activate(); return; }

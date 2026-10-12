@@ -301,11 +301,16 @@ public partial class MainWindow : Window
         ActivateFromCore();
     }
 
-    private void ToggleFastHotkey() => OpenPicker(toggle: true);
+    private void ToggleFastHotkey()
+    {
+        if (_settings.PreferQuickPicker) OpenPicker(toggle: true);
+        else ToggleManageFromHotkey(toggle: true, target: 0, pid: 0);
+    }
 
     private void ActivateFromCore()
     {
-        _picker?.HidePicker();
+        if (_allowClose || !RememberLaunchMode(false)) return;
+        _picker?.HidePicker(restoreTarget: false);
         _shortcutHidden = false;
         UpdateTrayUi();
         _ignoreDeactivationUntil = DateTime.UtcNow.AddMilliseconds(650);
@@ -1565,10 +1570,15 @@ public partial class MainWindow : Window
 
         var menu = new System.Windows.Forms.ContextMenuStrip();
 
-        var open = new System.Windows.Forms.ToolStripMenuItem("打開 ClipShelf");
+        var open = new System.Windows.Forms.ToolStripMenuItem("開啟完整管理");
         open.Click += (_, _) => Dispatcher.Invoke(ShowMainWindow);
         var quick = new System.Windows.Forms.ToolStripMenuItem("開啟快捷選取");
         quick.Click += (_, _) => Dispatcher.Invoke(() => OpenPicker()); menu.Items.Add(quick);
+        menu.Opening += (_, _) =>
+        {
+            quick.Text = _settings.PreferQuickPicker ? "開啟快捷選取  ✓" : "開啟快捷選取";
+            open.Text = _settings.PreferQuickPicker ? "開啟完整管理" : "開啟完整管理  ✓";
+        };
 
         _trayPauseItem = new System.Windows.Forms.ToolStripMenuItem("暫停自動保存");
         _trayPauseItem.Click += (_, _) => Dispatcher.Invoke(ToggleCapturePause);
@@ -1691,10 +1701,10 @@ public partial class MainWindow : Window
     private void Header_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
         var menu = new ContextMenu();
-        var quick = new MenuItem { Header = "開啟快捷選取" };
+        var quick = new MenuItem { Header = _settings.PreferQuickPicker ? "開啟快捷選取  ✓" : "開啟快捷選取" };
         quick.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => OpenPicker()));
         menu.Items.Add(quick);
-        var manage = new MenuItem { Header = "開啟完整管理" };
+        var manage = new MenuItem { Header = _settings.PreferQuickPicker ? "開啟完整管理" : "開啟完整管理  ✓" };
         manage.Click += (_, _) => ActivateFromCore(); menu.Items.Add(manage);
         menu.Items.Add(new Separator());
         if (_switchNonInterferenceMode)
@@ -4373,6 +4383,14 @@ public partial class MainWindow : Window
                                      Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin)))
             _keyboardSwitcherUntil = DateTime.UtcNow.AddMilliseconds(950);
 
+        // Plain Tab swaps modes, while Shift+Tab, Alt+Tab and inline editing retain their native meanings.
+        if (actualKey == Key.Tab && Keyboard.Modifiers == ModifierKeys.None
+            && _inlineEditItem == null && !e.IsRepeat)
+        {
+            e.Handled = true;
+            OpenPicker();
+            return;
+        }
         if (e.Key == Key.Escape && !string.IsNullOrWhiteSpace(SearchBox.Text))
         {
             SearchBox.Clear();

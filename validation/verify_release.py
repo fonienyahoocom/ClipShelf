@@ -59,33 +59,13 @@ check(all('..' not in x.split('\\') and not x.startswith('\\') for x in deletes)
 nsi=(s/'installer/ClipShelf.nsi').read_text()
 check('InstallDir "$LOCALAPPDATA\\Programs\\ClipShelf"' in nsi and not re.search(r'^(Delete|RMDir).*LOCALAPPDATA',nsi,re.M), 'installer leaves separate personal data path intact')
 check('Call CheckClosed' in nsi and 'Call un.CheckClosed' in nsi and 'ClipShelf.Core.SingleInstance' in nsi, 'install/uninstall require clean Core shutdown')
-protected=('ClipShelf/HistoryStore.cs','ClipShelf/BackupService.cs','ClipShelf/ClipEditing.cs','Shared/SafeState.cs','Shared/AutoBackup.cs')
+# 2.15.4 adds only presentation and focus behavior; persistence sources must
+# remain byte-identical to the verified 2.15.3 predecessor.
+protected=('ClipShelf/HistoryStore.cs','ClipShelf/BackupService.cs','ClipShelf/ClipItem.cs',
+           'ClipShelf/ClipEditing.cs','ClipShelf.Core/CoreStateStore.cs',
+           'Shared/SafeState.cs','Shared/AutoBackup.cs')
 for relative in protected:
-    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to verified preceding source')
-# This release intentionally adds a single persisted metadata field. Verify the exact
-# additive delta instead of weakening the other five byte-identity data safety guards.
-baseline_item=(b/'ClipShelf/ClipItem.cs').read_text(encoding='utf-8-sig')
-current_item=(s/'ClipShelf/ClipItem.cs').read_text(encoding='utf-8-sig')
-pin_block='''    // Quick-picker pin is independent from Favorite and Category; null for old records.
-    public DateTime? PinnedAt
-    {
-        get => _pinnedAt;
-        set { if (_pinnedAt == value) return; _pinnedAt = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsPinned)); }
-    }
-    [JsonIgnore] public bool IsPinned => PinnedAt.HasValue;
-
-'''
-check(current_item.count(pin_block)==1 and current_item.count('    private DateTime? _pinnedAt;\n')==1
-      and current_item.replace(pin_block,'').replace('    private DateTime? _pinnedAt;\n','')==baseline_item,
-      'ClipItem only adds reversible persisted pin metadata; all existing fields remain intact')
-baseline_core=(b/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig')
-current_core=(s/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig')
-expected_core=baseline_core.replace('GetBool(x, "HistoryVisible", false))',
-    'GetBool(x, "HistoryVisible", false) && GetDateTime(x, "PinnedAt") == DateTime.MinValue)').replace(
-    '        => GetBool(item, "Favorite", false)\n',
-    '        => GetBool(item, "Favorite", false)\n           || GetDateTime(item, "PinnedAt") != DateTime.MinValue\n')
-check(expected_core!=baseline_core and current_core==expected_core,
-      'Core history cap changes only exclude pinned items and preserve their placement')
+    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to 2.15.3 baseline')
 check('Read(path); // Never replace' in (s/'Shared/SafeState.cs').read_text(), 'fail-closed write revalidates existing history before replace')
 for filename in ('BUILD_EXE.cmd','BUILD_SETUP.cmd'):
     data=(s/filename).read_bytes()
@@ -117,6 +97,16 @@ check((s/'BUILD_PORTABLE.py').is_file() and 'library' not in (s/'BUILD_PORTABLE.
 check('Rows.SelectAll()' in picker_code and 'Rows.IsKeyboardFocusWithin' in picker_code and 'BatchActions.Visibility = count > 1' in picker_code, 'Ctrl+A scoped to list and batch actions only visible for multiselection')
 check('FloatingIconEnabled' in (s/'ClipShelf/AppSettings.cs').read_text() and 'bubble-visible' in integration and 'SetBubbleEnabled' in core, 'independent floating preference uses sole live state writer')
 check('_visibleItems.Remove(item)' in integration and 'CurrentSection().Kind == "Trash") RefreshVisibleItems();' in integration, 'picker deletion updates active manager projection and existing Trash query without clearing unrelated draft cards')
+# Validate the actual WPF hierarchy and outside-focus wiring, not only data tests.
+manager_xaml=ET.parse(s/'ClipShelf/MainWindow.xaml').getroot()
+titles=[x for x in manager_xaml.iter() if x.tag.endswith('TextBlock') and x.attrib.get('Text')=='{Binding Title}']
+editors=[x for x in manager_xaml.iter() if x.tag.endswith('TextBox') and x.attrib.get('{http://schemas.microsoft.com/winfx/2006/xaml}Name')=='ClipTitleEditor']
+check(len(titles)==1 and titles[0].attrib.get('FontSize')=='17' and titles[0].attrib.get('FontWeight')=='Bold'
+      and len(editors)==1 and editors[0].attrib.get('FontSize')=='17' and editors[0].attrib.get('Grid.ColumnSpan')=='2',
+      'custom title and inline editor use distinct full-width 17pt hierarchy')
+check('InlineEditDismissal.ShouldBlockOutsideHide' in ui
+      and '!ReferenceEquals(_inlineEditItem, item) || !item.IsInlineEditing || !IsActive' in (s/'ClipShelf/CardInteractions.cs').read_text(),
+      'outside deactivation respects inline drafts and delayed editor focus cannot steal external foreground')
 test=(s/'validation/tests.log').read_text()
 totals=[int(x) for x in re.findall(r'PASSED (\d+) CHECKS', test)]
 check(bool(totals) and max(totals) >= 86,

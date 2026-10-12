@@ -43,7 +43,7 @@ public partial class MainWindow
     }
     private void EnsurePicker()
     {
-        _picker ??= new QuickPickerWindow(() => _allItems, () => _settings, QueueSave, ActivateFromCore, CopyForPickerAsync, DeleteForPicker, () => _folderPaths);
+        _picker ??= new QuickPickerWindow(() => _allItems, () => _settings, QueueSave, ActivateFromCore, CopyForPickerAsync, DeleteForPicker, TogglePinForPicker, () => _folderPaths);
     }
     private void OpenPicker(bool toggle = false, long target = 0, int pid = 0, long started = 0)
     {
@@ -66,6 +66,15 @@ public partial class MainWindow
         _picker.OpenPicker(target, pid, started);
     }
     private void QuickPicker_Click(object sender, RoutedEventArgs e) => OpenPicker();
+    private void TogglePinForPicker(ClipItem item)
+    {
+        if (!_allItems.Contains(item) || item.IsDeleted || item.IsPendingPurge)
+            throw new InvalidOperationException("紀錄已移除；請重新選取。");
+        if (item.IsInlineEditing)
+            throw new InvalidOperationException("這筆紀錄正在編輯，請先完成編輯。");
+        try { PickerPinning.Toggle(item, () => { QueueSave(); _store.SaveNowChecked(); }); }
+        catch { QueueSave(); throw; } // Failed state must not survive in the pending JSON.
+    }
     private void DeleteForPicker(System.Collections.Generic.IReadOnlyList<ClipItem> items)
     {
         if (items.Count == 0 || items.Any(x => !_allItems.Contains(x) || x.IsDeleted || x.IsPendingPurge))

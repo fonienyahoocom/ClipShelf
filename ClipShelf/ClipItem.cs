@@ -24,6 +24,7 @@ public sealed class ClipItem : INotifyPropertyChanged
     private bool _showSelector;
     private string _text = "";
     private bool _historyVisible;
+    private DateTime? _pinnedAt;
     private bool _isContentExpanded;
     private bool _isDeleted;
     private DateTime? _deletedAt;
@@ -113,6 +114,14 @@ public sealed class ClipItem : INotifyPropertyChanged
         set { _historyVisible = value; OnPropertyChanged(); }
     }
 
+
+    // Quick-picker pin is independent from Favorite and Category; null for old records.
+    public DateTime? PinnedAt
+    {
+        get => _pinnedAt;
+        set { if (_pinnedAt == value) return; _pinnedAt = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsPinned)); }
+    }
+    [JsonIgnore] public bool IsPinned => PinnedAt.HasValue;
 
     // v2.7: safe-delete lifecycle. Soft-deleted items remain serialized and keep
     // their folder/favorite/history placement metadata until restore or purge.

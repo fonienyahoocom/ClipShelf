@@ -256,7 +256,7 @@ internal sealed class CoreStateStore
         if (max <= 0) return;
 
         var history = Items.OfType<JsonObject>()
-            .Where(x => !GetBool(x, "IsDeleted", false) && !GetBool(x, "IsPendingPurge", false) && GetBool(x, "HistoryVisible", false))
+            .Where(x => !GetBool(x, "IsDeleted", false) && !GetBool(x, "IsPendingPurge", false) && GetBool(x, "HistoryVisible", false) && GetDateTime(x, "PinnedAt") == DateTime.MinValue)
             .OrderByDescending(x => GetDateTime(x, "LastUsedAt"))
             .ToList();
 
@@ -276,6 +276,7 @@ internal sealed class CoreStateStore
 
     private static bool HasPersistentPlacement(JsonObject item)
         => GetBool(item, "Favorite", false)
+           || GetDateTime(item, "PinnedAt") != DateTime.MinValue
            || GetBool(item, "IsTemporary", false)
            || !string.IsNullOrWhiteSpace(GetString(item, "Category", ""))
            || !string.IsNullOrWhiteSpace(GetString(item, "FavoriteFolder", ""))

@@ -620,7 +620,7 @@ public partial class MainWindow : Window
         // Overflow entries that still have a durable placement are merely removed
         // from History; standalone inbox items can be deleted normally.
         var overflow = _allItems
-            .Where(x => !x.IsDeleted && !x.IsPendingPurge && x.HistoryVisible)
+            .Where(x => !x.IsDeleted && !x.IsPendingPurge && x.HistoryVisible && !x.IsPinned)
             .OrderByDescending(x => x.LastUsedAt)
             .Skip(maxRegularItems)
             .ToList();
@@ -3946,6 +3946,7 @@ public partial class MainWindow : Window
     private static bool HasPersistentPlacement(ClipItem item)
     {
         return item.Favorite ||
+               item.IsPinned ||
                item.IsTemporary ||
                !string.IsNullOrWhiteSpace(item.Category) ||
                !string.IsNullOrWhiteSpace(item.FavoriteFolder) ||

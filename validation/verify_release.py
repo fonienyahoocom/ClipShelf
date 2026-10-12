@@ -59,9 +59,33 @@ check(all('..' not in x.split('\\') and not x.startswith('\\') for x in deletes)
 nsi=(s/'installer/ClipShelf.nsi').read_text()
 check('InstallDir "$LOCALAPPDATA\\Programs\\ClipShelf"' in nsi and not re.search(r'^(Delete|RMDir).*LOCALAPPDATA',nsi,re.M), 'installer leaves separate personal data path intact')
 check('Call CheckClosed' in nsi and 'Call un.CheckClosed' in nsi and 'ClipShelf.Core.SingleInstance' in nsi, 'install/uninstall require clean Core shutdown')
-protected=('ClipShelf/HistoryStore.cs','ClipShelf/BackupService.cs','ClipShelf/ClipItem.cs','ClipShelf/ClipEditing.cs','Shared/SafeState.cs','Shared/AutoBackup.cs')
+protected=('ClipShelf/HistoryStore.cs','ClipShelf/BackupService.cs','ClipShelf/ClipEditing.cs','Shared/SafeState.cs','Shared/AutoBackup.cs')
 for relative in protected:
     check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to verified preceding source')
+# This release intentionally adds a single persisted metadata field. Verify the exact
+# additive delta instead of weakening the other five byte-identity data safety guards.
+baseline_item=(b/'ClipShelf/ClipItem.cs').read_text(encoding='utf-8-sig')
+current_item=(s/'ClipShelf/ClipItem.cs').read_text(encoding='utf-8-sig')
+pin_block='''    // Quick-picker pin is independent from Favorite and Category; null for old records.
+    public DateTime? PinnedAt
+    {
+        get => _pinnedAt;
+        set { if (_pinnedAt == value) return; _pinnedAt = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsPinned)); }
+    }
+    [JsonIgnore] public bool IsPinned => PinnedAt.HasValue;
+
+'''
+check(current_item.count(pin_block)==1 and current_item.count('    private DateTime? _pinnedAt;\n')==1
+      and current_item.replace(pin_block,'').replace('    private DateTime? _pinnedAt;\n','')==baseline_item,
+      'ClipItem only adds reversible persisted pin metadata; all existing fields remain intact')
+baseline_core=(b/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig')
+current_core=(s/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig')
+expected_core=baseline_core.replace('GetBool(x, "HistoryVisible", false))',
+    'GetBool(x, "HistoryVisible", false) && GetDateTime(x, "PinnedAt") == DateTime.MinValue)').replace(
+    '        => GetBool(item, "Favorite", false)\n',
+    '        => GetBool(item, "Favorite", false)\n           || GetDateTime(item, "PinnedAt") != DateTime.MinValue\n')
+check(expected_core!=baseline_core and current_core==expected_core,
+      'Core history cap changes only exclude pinned items and preserve their placement')
 check('Read(path); // Never replace' in (s/'Shared/SafeState.cs').read_text(), 'fail-closed write revalidates existing history before replace')
 for filename in ('BUILD_EXE.cmd','BUILD_SETUP.cmd'):
     data=(s/filename).read_bytes()
@@ -94,7 +118,15 @@ check('Rows.SelectAll()' in picker_code and 'Rows.IsKeyboardFocusWithin' in pick
 check('FloatingIconEnabled' in (s/'ClipShelf/AppSettings.cs').read_text() and 'bubble-visible' in integration and 'SetBubbleEnabled' in core, 'independent floating preference uses sole live state writer')
 check('_visibleItems.Remove(item)' in integration and 'CurrentSection().Kind == "Trash") RefreshVisibleItems();' in integration, 'picker deletion updates active manager projection and existing Trash query without clearing unrelated draft cards')
 test=(s/'validation/tests.log').read_text()
-check(bool(re.search(r'PASSED (82|86) CHECKS', test)), 'automated test report includes all existing regressions and 18 new checks; blocked IPC reported separately')
+totals=[int(x) for x in re.findall(r'PASSED (\\d+) CHECKS', test)]
+check(bool(totals) and max(totals) >= 86,
+      'Windows automated tests retain >=86 baseline checks and include new pin regressions')
+check('pin moves older item to top immediately' in test and 'second click removes pin' in test
+      and 'Core overflow preserves pinned record in History' in test,
+      'actual Windows tests exercised pin, unpin, persistence and Core history retention')
+check('PinRow_Click' in picker_code and 'ReorderPins()' in picker_code
+      and 'PinOpacity' in (s/'ClipShelf/QuickPickerWindow.xaml').read_text(encoding='utf-8-sig'),
+      'quick picker per-row pin/unpin control is wired to its bounded reorder action')
 (s/'validation/payload-manifest.json').write_text(json.dumps({'version':release_version,'files':entries},ensure_ascii=False,indent=2)+'\n')
 (s/'validation/package-checks.json').write_text(json.dumps({'version':release_version,'checks_passed':len(checks),'checks':checks,'payload_files':len(entries),'native_windows_runtime':'UNVERIFIED'},ensure_ascii=False,indent=2)+'\n')
 print(f'ALL {len(checks)} OFFLINE RELEASE CHECKS PASSED; NATIVE WINDOWS UNVERIFIED')

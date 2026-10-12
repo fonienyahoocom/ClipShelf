@@ -59,13 +59,22 @@ check(all('..' not in x.split('\\') and not x.startswith('\\') for x in deletes)
 nsi=(s/'installer/ClipShelf.nsi').read_text()
 check('InstallDir "$LOCALAPPDATA\\Programs\\ClipShelf"' in nsi and not re.search(r'^(Delete|RMDir).*LOCALAPPDATA',nsi,re.M), 'installer leaves separate personal data path intact')
 check('Call CheckClosed' in nsi and 'Call un.CheckClosed' in nsi and 'ClipShelf.Core.SingleInstance' in nsi, 'install/uninstall require clean Core shutdown')
-# 2.15.5 changes presentation only; persistence sources must
-# remain byte-identical to the verified 2.15.3 predecessor.
+# 2.15.6 intentionally adds only a read-only preference projection in CoreStateStore.
+# All existing persistence, backup, history and data schema code remains byte-identical.
 protected=('ClipShelf/HistoryStore.cs','ClipShelf/BackupService.cs','ClipShelf/ClipItem.cs',
-           'ClipShelf/ClipEditing.cs','ClipShelf.Core/CoreStateStore.cs',
-           'Shared/SafeState.cs','Shared/AutoBackup.cs')
+           'ClipShelf/ClipEditing.cs','Shared/SafeState.cs','Shared/AutoBackup.cs')
 for relative in protected:
-    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to 2.15.4 baseline')
+    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to 2.15.5 baseline')
+core_delta='''    public bool PreferQuickPicker
+    {
+        get { lock (_sync) return GetBool(Settings, "PreferQuickPicker", true); }
+    }
+
+'''
+base_core=(b/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig')
+current_core=(s/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig')
+check(current_core.count(core_delta)==1 and current_core.replace(core_delta,'')==base_core,
+      'CoreStateStore adds only preference read-through, no changes to existing disk data handling')
 check('Read(path); // Never replace' in (s/'Shared/SafeState.cs').read_text(), 'fail-closed write revalidates existing history before replace')
 for filename in ('BUILD_EXE.cmd','BUILD_SETUP.cmd'):
     data=(s/filename).read_bytes()
@@ -80,7 +89,7 @@ listbox=quick.find('.//w:ListBox',ns)
 check(listbox is not None and listbox.attrib.get('VirtualizingPanel.VirtualizationMode')=='Recycling', 'quick rows use recycling virtualization')
 check('TimeSpan.FromSeconds(45)' not in ui and 'TimeSpan.FromSeconds(300)' not in ui and 'StartWarmStandby' not in ui, '45/300-second WPF expiry paths absent')
 core=(s/'ClipShelf.Core/CoreContext.cs').read_text()
-check('ToggleUiFromHotkey' in core and 'RequestUi("toggle-quick")' in core and '"--resident"' in core, 'hotkey routes to resident independent picker')
+check('ToggleUiFromHotkey' in core and 'RequestUi("toggle-preferred")' in core and '"--resident"' in core, 'hotkey routes to persistent preferred resident work mode')
 check('0x4000' in (s/'ClipShelf.Core/NativeMessageWindow.cs').read_text() and 'HotkeyRegistered = RegisterHotKey' in (s/'ClipShelf.Core/NativeMessageWindow.cs').read_text(), 'native hotkey registration result and MOD_NOREPEAT are handled')
 check('SetWindowsHookEx' not in (s/'ClipShelf.Core/BubbleForm.cs').read_text(), 'bubble patch introduces no low-level global hook')
 check('IsVisible) await IndexAttachmentsAsync' in (s/'ClipShelf/ProductFeatures.cs').read_text(), 'hidden manager skips periodic attachment reindex')

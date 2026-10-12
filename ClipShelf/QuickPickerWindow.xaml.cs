@@ -26,6 +26,7 @@ public partial class QuickPickerWindow : Window
     private readonly Action _manage;
     private readonly Func<IReadOnlyList<ClipItem>, bool, Task> _copy;
     private readonly Action<IReadOnlyList<ClipItem>> _delete;
+    private readonly Action<ClipItem> _togglePin;
     private readonly Func<IEnumerable<string>> _folders;
     private int _ownedInteraction;
     private bool _refreshingScopes;
@@ -38,9 +39,9 @@ public partial class QuickPickerWindow : Window
 
     internal QuickPickerWindow(Func<IEnumerable<ClipItem>> items, Func<AppSettings> settings,
         Action save, Action manage, Func<IReadOnlyList<ClipItem>, bool, Task> copy,
-        Action<IReadOnlyList<ClipItem>> delete, Func<IEnumerable<string>> folders)
+        Action<IReadOnlyList<ClipItem>> delete, Action<ClipItem> togglePin, Func<IEnumerable<string>> folders)
     {
-        InitializeComponent(); _items = items; _settings = settings; _save = save; _manage = manage; _copy = copy; _delete = delete; _folders = folders;
+        InitializeComponent(); _items = items; _settings = settings; _save = save; _manage = manage; _copy = copy; _delete = delete; _togglePin = togglePin; _folders = folders;
         KeepOpen.IsChecked = !settings().PickerCloseOnDeactivate;
         Deactivated += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
@@ -214,6 +215,21 @@ public partial class QuickPickerWindow : Window
             Rows.SelectedItem = container.DataContext;
     }
     private void DeleteSelected_Click(object sender, RoutedEventArgs e) { e.Handled = true; DeleteSelection(); }
+    private void PinRow_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (IsBusy || (sender as FrameworkElement)?.DataContext is not PickerRow row) return;
+        try
+        {
+            _togglePin(row.Item);
+            _model.ReorderPins();
+            ApplySearch();
+            var liveRow = _rows.FirstOrDefault(x => x.Item.Id == row.Item.Id);
+            if (liveRow != null) Rows.ScrollIntoView(liveRow);
+            Status.Text = row.Item.IsPinned ? "📌 已釘選置頂，再按圖釘可取消。" : "已取消釘選，恢復最近使用排序。";
+        }
+        catch (Exception ex) { Status.Text = "釘選未保存：" + ex.Message; }
+    }
     private void DeleteRow_Click(object sender, RoutedEventArgs e)
     { e.Handled = true; if ((sender as FrameworkElement)?.DataContext is PickerRow row) DeleteItems(new[] { row.Item }); }
     private void DeleteItems(IReadOnlyList<ClipItem> items)
@@ -274,13 +290,17 @@ internal sealed class PickerRow : INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Summary)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Detail)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PinOpacity)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PinTip)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Preview)));
     }
     public ClipItem Item { get; }
     public PickerRow(ClipItem item) => Item = item;
     public string Glyph => Item.Kind == "Image" ? "▧" : Item.Kind == "Files" ? "▤" : "≡";
     public string Summary { get { var text = string.IsNullOrWhiteSpace(Item.Title) ? Item.DisplayText : Item.Title; return text[..Math.Min(text.Length, 300)].Replace('\r', ' ').Replace('\n', ' '); } }
-    public string Detail => Item.Kind == "Files" ? $"檔案 · {Item.Files.Count} 個" : Item.Kind == "Image" ? "圖片" : $"文字 · {Item.Text.Length:N0} 字 · {Item.SourceApp}";
+    public string Detail => (Item.IsPinned ? "📌 已釘選 · " : "") + (Item.Kind == "Files" ? $"檔案 · {Item.Files.Count} 個" : Item.Kind == "Image" ? "圖片" : $"文字 · {Item.Text.Length:N0} 字 · {Item.SourceApp}");
+    public double PinOpacity => Item.IsPinned ? 1.0 : 0.42;
+    public string PinTip => Item.IsPinned ? "取消釘選，恢復最近使用排序" : "釘選置頂，重啟後仍保留";
     public string Preview => Item.DisplayText[..Math.Min(Item.DisplayText.Length, 2000)];
     private BitmapImage? _thumbnail;
     private bool _loaded;
@@ -307,7 +327,7 @@ internal static class PickerDiagnostics
             Directory.CreateDirectory(dir); var path = Path.Combine(dir, "picker-wake.csv");
             if (File.Exists(path) && new FileInfo(path).Length > 256000) File.Move(path, path + ".previous", true);
             using var p = Process.GetCurrentProcess();
-            File.AppendAllText(path, $"{DateTime.UtcNow:O},2.15.2,{Environment.ProcessId},{elapsed.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.WorkingSet64},{p.PrivateMemorySize64},{p.TotalProcessorTime.TotalMilliseconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n");
+            File.AppendAllText(path, $"{DateTime.UtcNow:O},2.15.3,{Environment.ProcessId},{elapsed.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.WorkingSet64},{p.PrivateMemorySize64},{p.TotalProcessorTime.TotalMilliseconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n");
         }
         catch { }
     }

@@ -7,7 +7,7 @@ using System.IO.Compression;
 var root = Path.Combine(Path.GetTempPath(), "ClipShelfTests-"+Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 int checks = 0;
-Console.WriteLine("CHAT_BUILD_E2E: ClipShelf 2.15.2 source edited through GitHub Connector");
+Console.WriteLine("CHAT_BUILD_E2E: ClipShelf 2.15.3 pin/unpin Quick Picker regression");
 void Check(bool value, string label) { if (!value) throw new Exception("FAIL: "+label); Console.WriteLine("PASS: "+label); checks++; }
 string State(IEnumerable<ClipItem> items, AppSettings? settings = null) => JsonSerializer.Serialize(new { Items=items.ToList(), Categories = new[]{"AI 用語/測試"}, Settings=settings??new AppSettings { HistoryModelVersion=1 } });
 try {
@@ -147,6 +147,39 @@ try {
     var many=Enumerable.Range(0,12000).Select(i=>new ClipItem {Text="entry "+i,HistoryVisible=true}).ToList();picker.Open(many);
     Check(picker.Search("").Count==1000, "large history projection bounded at 1000 results");
     Check(picker.Search("entry 11999").Single().Text=="entry 11999", "search reaches records beyond displayed projection");
+    // Pin is independent of Favorite and only an explicit pin change reorders the open picker.
+    var pinOld = new ClipItem {Text="舊的重要內容", HistoryVisible=true, LastUsedAt=DateTime.Now.AddDays(-7)};
+    var pinNew = new ClipItem {Text="新內容", HistoryVisible=true, LastUsedAt=DateTime.Now};
+    picker.Open(new[]{pinOld,pinNew});
+    Check(picker.Search("").First()==pinNew, "unpinned picker keeps recent-first order");
+    Check(PickerPinning.Toggle(pinOld,()=>{}) && pinOld.IsPinned && !pinOld.Favorite, "pin is independent of favorite");
+    picker.ReorderPins();
+    Check(picker.Search("").First()==pinOld, "pin moves older item to top immediately");
+    var pinPath=Path.Combine(root,"pinned","history.json");
+    SafeState.Write(pinPath,State(new[]{pinOld,pinNew}));
+    var persistedPin=JsonNode.Parse(File.ReadAllText(pinPath))!["Items"]![0]!;
+    Check(persistedPin["PinnedAt"]!=null && persistedPin["Favorite"]!.GetValue<bool>()==false, "pin metadata persists without changing favorite");
+    var reloadedPin=JsonSerializer.Deserialize<ClipItem>(persistedPin.ToJsonString())!;
+    Check(reloadedPin.IsPinned && reloadedPin.Id==pinOld.Id && reloadedPin.Text==pinOld.Text, "pinned item survives disk reload");
+    Check(!PickerPinning.Toggle(pinOld,()=>{}) && !pinOld.IsPinned, "second click removes pin");
+    picker.ReorderPins();
+    Check(picker.Search("").First()==pinNew, "unpin restores recency ordering");
+    var pinFailed=false;
+    try { PickerPinning.Toggle(pinOld,()=>throw new IOException("disk failure")); } catch(IOException) {pinFailed=true;}
+    Check(pinFailed && !pinOld.IsPinned, "checked persistence failure rolls pin back");
+    pinOld.PinnedAt=DateTime.Now;pinOld.IsDeleted=true;
+    picker.Synchronize(new[]{pinOld,pinNew});
+    Check(picker.Search("").Single()==pinNew, "pinned soft-deleted item hidden from picker");
+    // Core background trimming must preserve pinned history items even over the configured cap.
+    var corePinDir=Path.Combine(root,"core-pin");Directory.CreateDirectory(corePinDir);
+    var corePin=new ClipItem {Text="保留釘選",HistoryVisible=true,PinnedAt=DateTime.Now.AddHours(-1),LastUsedAt=DateTime.Now.AddDays(-30)};
+    var coreOld=new ClipItem {Text="舊的一般紀錄",HistoryVisible=true,LastUsedAt=DateTime.Now.AddDays(-2)};
+    SafeState.Write(Path.Combine(corePinDir,"history.json"),State(new[]{corePin,coreOld},new AppSettings {HistoryModelVersion=1,MaxRegularItems=1}));
+    var corePinStore=new CoreStateStore(corePinDir);corePinStore.AddOrTouchText("新擷取", "test", "");
+    var corePinRows=JsonNode.Parse(File.ReadAllText(Path.Combine(corePinDir,"history.json")))!["Items"]!.AsArray();
+    var protectedPin=corePinRows.Single(x=>x!["Id"]!.GetValue<Guid>()==corePin.Id)!;
+    Check(protectedPin["IsDeleted"]!.GetValue<bool>()==false && protectedPin["HistoryVisible"]!.GetValue<bool>(), "Core overflow preserves pinned record in History");
+    Check(corePinRows.Count(x=>x!["IsDeleted"]!.GetValue<bool>()==false && x!["PinnedAt"]==null && x!["HistoryVisible"]!.GetValue<bool>())==1, "Core cap continues applying to ordinary unpinned history");
     var session=new PickerSession();
     Check(!session.TryBeginPaste(), "hidden picker cannot paste");session.Open(123,456);
     Check(session.Target==123 && session.TargetPid==456 && session.Visible, "session retains original target with process identity");

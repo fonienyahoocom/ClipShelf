@@ -179,7 +179,7 @@ try {
     var corePinRows=JsonNode.Parse(File.ReadAllText(Path.Combine(corePinDir,"history.json")))!["Items"]!.AsArray();
     var protectedPin=corePinRows.Single(x=>x!["Id"]!.GetValue<Guid>()==corePin.Id)!;
     Check(protectedPin["IsDeleted"]!.GetValue<bool>()==false && protectedPin["HistoryVisible"]!.GetValue<bool>(), "Core overflow preserves pinned record in History");
-    Check(corePinRows.Count(x=>x!["IsDeleted"]!.GetValue<bool>()==false && x!["PinnedAt"]==null && x!["HistoryVisible"]!.GetValue<bool>())==1, "Core cap continues applying to ordinary unpinned history");
+    Check(corePinRows.Count(x=>x?["IsDeleted"]?.GetValue<bool>() != true && x?["PinnedAt"] == null && x?["HistoryVisible"]?.GetValue<bool>() == true)==1, "Core cap continues applying to ordinary unpinned history");
     var session=new PickerSession();
     Check(!session.TryBeginPaste(), "hidden picker cannot paste");session.Open(123,456);
     Check(session.Target==123 && session.TargetPid==456 && session.Visible, "session retains original target with process identity");

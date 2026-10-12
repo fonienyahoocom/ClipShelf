@@ -184,6 +184,25 @@ try {
     Check(!InlineEditDismissal.ShouldBlockOutsideHide(1,true), "inline title or body draft does not block outside hide");
     Check(InlineEditDismissal.ShouldBlockOutsideHide(2,true), "inline context menu still blocks outside hide");
     Check(!InlineEditDismissal.ShouldBlockOutsideHide(0,false), "no suspension allows outside hide");
+    // Preference is stored with existing settings, separate from A/B and visibility.
+    Check(new AppSettings().PreferQuickPicker, "legacy configuration defaults to quick picker");
+    var modeSettings = new AppSettings {PreferQuickPicker=false,CompactView=true,PickerCloseOnDeactivate=false};
+    var modeClone=JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(modeSettings.Clone()))!;
+    Check(!modeClone.PreferQuickPicker && modeClone.CompactView && !modeClone.PickerCloseOnDeactivate,
+        "manager mode clone/JSON preserves A/B and independent keep-open choice");
+    var modeDir=Path.Combine(root,"mode");Directory.CreateDirectory(modeDir);
+    var modePath=Path.Combine(modeDir,"history.json");
+    SafeState.Write(modePath,State(new[]{new ClipItem {Text="保留原始內容",HistoryVisible=true}},modeSettings));
+    var modeCore=new CoreStateStore(modeDir);
+    Check(!modeCore.PreferQuickPicker, "Core observes manager preference on disk");
+    var modeJson=JsonNode.Parse(File.ReadAllText(modePath))!;
+    modeJson["Settings"]!["PreferQuickPicker"]=true;
+    SafeState.Write(modePath,modeJson.ToJsonString());modeCore.Reload();
+    Check(modeCore.PreferQuickPicker && JsonNode.Parse(File.ReadAllText(modePath))!["Items"]!.AsArray().Count==1,
+        "Core sees switch back to quick without modifying history");
+    modeJson["Settings"]!.AsObject().Remove("PreferQuickPicker");
+    SafeState.Write(modePath,modeJson.ToJsonString());modeCore.Reload();
+    Check(modeCore.PreferQuickPicker, "old JSON without preference retains quick picker default");
     var session=new PickerSession();
     Check(!session.TryBeginPaste(), "hidden picker cannot paste");session.Open(123,456);
     Check(session.Target==123 && session.TargetPid==456 && session.Visible, "session retains original target with process identity");

@@ -575,7 +575,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Margin="15,0,12,0" VerticalAlignment="Center" Foreground="#64748B" FontSize="10.5"
-                           Text="Ctrl+~ 隱藏　Ctrl / Shift 點卡片空白可多選"/>
+                           Text="Tab 切快捷選取 · Ctrl / Shift 點卡片空白可多選"/>
                 <TextBlock x:Name="CaptureStateText" Grid.Column="1" Margin="0,0,14,0" VerticalAlignment="Center" Foreground="#0F766E" FontSize="10.5" FontWeight="SemiBold" Text="已自動儲存"/>
                 <TextBlock Grid.Column="2" Margin="0,0,24,0" VerticalAlignment="Center" Foreground="#64748B" FontSize="10.5" Text="本機保存" ToolTip="內容保存在本機，不上傳雲端"/>
                 <TextBlock x:Name="ModeStateText" Visibility="Collapsed"/>

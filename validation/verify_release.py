@@ -120,6 +120,25 @@ check('BuildClipDetailsMenu(item)' in manager and manager.count('BuildClipDetail
 check('InlineEditDismissal.ShouldBlockOutsideHide' in ui
       and '!ReferenceEquals(_inlineEditItem, item) || !item.IsInlineEditing || !IsActive' in (s/'ClipShelf/CardInteractions.cs').read_text(),
       'outside deactivation respects inline drafts and delayed editor focus cannot steal external foreground')
+core_mode=(s/'ClipShelf.Core/CoreContext.cs').read_text(encoding='utf-8-sig')
+bubble_mode=(s/'ClipShelf.Core/BubbleForm.cs').read_text(encoding='utf-8-sig')
+ui_mode=(s/'ClipShelf/PickerIntegration.cs').read_text(encoding='utf-8-sig')
+manager_keys=(s/'ClipShelf/MainWindow.xaml.cs').read_text(encoding='utf-8-sig')
+picker_keys=(s/'ClipShelf/QuickPickerWindow.xaml.cs').read_text(encoding='utf-8-sig')
+check('RequestUi("toggle-preferred")' in core_mode and 'request.Command is "preferred" or "toggle-preferred"' in ui_mode
+      and 'if (_settings.PreferQuickPicker)' in ui_mode, 'Ctrl+tilde reads live selected work mode')
+check('RememberLaunchMode(true)' in ui_mode and 'RememberLaunchMode(false)' in manager_keys
+      and '_store.SaveNowChecked()' in ui_mode and '_coreBridge.NotifyStateChanged()' in ui_mode,
+      'both mode entry paths persist the preference with rollback and Core notification')
+check('key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None' in picker_keys
+      and 'actualKey == Key.Tab && Keyboard.Modifiers == ModifierKeys.None' in manager_keys
+      and '_inlineEditItem == null' in manager_keys,
+      'plain Tab switches modes without stealing Alt+Tab, Shift+Tab or draft input')
+check('開啟完整管理  ✓' in core_mode and '開啟快捷選取  ✓' in core_mode
+      and '開啟完整管理  ✓' in bubble_mode and '開啟快捷選取  ✓' in bubble_mode,
+      'tray and bubble show the chosen mode with an end-of-label black check')
+check('GetBool(Settings, "PreferQuickPicker", true)' in (s/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig'),
+      'Core uses persisted legacy-safe mode while preserving prior history schema')
 test=(s/'validation/tests.log').read_text()
 totals=[int(x) for x in re.findall(r'PASSED (\d+) CHECKS', test)]
 check(bool(totals) and max(totals) >= 86,

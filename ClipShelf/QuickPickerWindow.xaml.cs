@@ -124,6 +124,12 @@ public partial class QuickPickerWindow : Window
     {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         if (_composing || key == Key.ImeProcessed) return;
+        if (key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None && !ScopeBox.IsDropDownOpen)
+        {
+            e.Handled = true;
+            if (!IsBusy && !e.IsRepeat) _manage();
+            return;
+        }
         if (IsBusy) { e.Handled = true; return; }
         // Controls own their activation keys; selecting a folder or activating
         // Delete/Manage must never be interpreted as a clipboard paste.
@@ -254,7 +260,11 @@ public partial class QuickPickerWindow : Window
     }
     private void KeepOpen_Click(object sender, RoutedEventArgs e)
     { _settings().PickerCloseOnDeactivate = KeepOpen.IsChecked != true; _save(); }
-    private void Manage_Click(object sender, RoutedEventArgs e) { if (IsBusy) return; HidePicker(); _manage(); }
+    private void Manage_Click(object sender, RoutedEventArgs e)
+    {
+        if (IsBusy) return;
+        _manage(); // Full manager hides picker without restoring the previous paste target.
+    }
     private void RestorePlacement()
     {
         _restoringPlacement = true;
@@ -327,7 +337,7 @@ internal static class PickerDiagnostics
             Directory.CreateDirectory(dir); var path = Path.Combine(dir, "picker-wake.csv");
             if (File.Exists(path) && new FileInfo(path).Length > 256000) File.Move(path, path + ".previous", true);
             using var p = Process.GetCurrentProcess();
-            File.AppendAllText(path, $"{DateTime.UtcNow:O},2.15.5,{Environment.ProcessId},{elapsed.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.WorkingSet64},{p.PrivateMemorySize64},{p.TotalProcessorTime.TotalMilliseconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n");
+            File.AppendAllText(path, $"{DateTime.UtcNow:O},2.15.6,{Environment.ProcessId},{elapsed.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.WorkingSet64},{p.PrivateMemorySize64},{p.TotalProcessorTime.TotalMilliseconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n");
         }
         catch { }
     }

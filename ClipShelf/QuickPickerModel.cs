@@ -49,6 +49,14 @@ internal static class PickerPinning
     }
 }
 
+// The inline draft owns one ordinary hide suspension. Modal or menu
+// suspensions must still protect against accidental outside hiding.
+internal static class InlineEditDismissal
+{
+    internal static bool ShouldBlockOutsideHide(int suspensionCount, bool inlineEditActive)
+        => suspensionCount > (inlineEditActive ? 1 : 0);
+}
+
 internal sealed class PickerSession
 {
     public bool Visible { get; private set; }

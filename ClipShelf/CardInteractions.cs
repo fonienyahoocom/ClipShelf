@@ -162,7 +162,7 @@ public partial class MainWindow
         // restoration has finished, and do not scroll an already-realized row.
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            if (!ReferenceEquals(_inlineEditItem, item) || !item.IsInlineEditing) return;
+            if (!ReferenceEquals(_inlineEditItem, item) || !item.IsInlineEditing || !IsActive) return;
             if (_activeCardMenu?.IsOpen == true) return;
             if (HistoryList.ItemContainerGenerator.ContainerFromItem(item) == null) HistoryList.ScrollIntoView(item);
             HistoryList.UpdateLayout();

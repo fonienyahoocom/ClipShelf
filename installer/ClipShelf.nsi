@@ -5,7 +5,7 @@ Target amd64-unicode
 !include "x64.nsh"
 Name "ClipShelf 剪貼庫"
 !ifndef OUTPUT_FILE
-!define OUTPUT_FILE "../../deliverables/ClipShelf-2.15.3-Setup.exe"
+!define OUTPUT_FILE "../../deliverables/ClipShelf-2.15.4-Setup.exe"
 !endif
 !ifndef PAYLOAD_DIR
 !define PAYLOAD_DIR "../release"
@@ -16,11 +16,11 @@ InstallDirRegKey HKCU "Software\ClipShelf\Installer" "Path"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 BrandingText "ClipShelf · 本機剪貼庫"
-VIProductVersion "2.15.3.0"
+VIProductVersion "2.15.4.0"
 VIAddVersionKey /LANG=1028 "ProductName" "ClipShelf"
 VIAddVersionKey /LANG=1028 "FileDescription" "ClipShelf Setup"
-VIAddVersionKey /LANG=1028 "FileVersion" "2.15.3.0"
-VIAddVersionKey /LANG=1028 "ProductVersion" "2.15.3"
+VIAddVersionKey /LANG=1028 "FileVersion" "2.15.4.0"
+VIAddVersionKey /LANG=1028 "ProductVersion" "2.15.4"
 VIAddVersionKey /LANG=1028 "LegalCopyright" "ClipShelf"
 !define MUI_ICON "../ClipShelf/clipshelf.ico"
 !define MUI_UNICON "../ClipShelf/clipshelf.ico"
@@ -86,9 +86,9 @@ Section "ClipShelf 主程式（必要）" SEC_MAIN
   CreateShortcut "$SMPROGRAMS\ClipShelf\ClipShelf.lnk" "$INSTDIR\ClipShelf.exe"
   CreateShortcut "$SMPROGRAMS\ClipShelf\解除安裝.lnk" "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "Software\ClipShelf\Installer" "Path" "$INSTDIR"
-  WriteRegStr HKCU "Software\ClipShelf\Installer" "Version" "2.15.3"
+  WriteRegStr HKCU "Software\ClipShelf\Installer" "Version" "2.15.4"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayName" "ClipShelf 剪貼庫"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayVersion" "2.15.3"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayVersion" "2.15.4"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "DisplayIcon" "$INSTDIR\ClipShelf.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipShelf" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'

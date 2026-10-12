@@ -76,7 +76,7 @@ internal static class CrashReporter
         var sb = new StringBuilder();
         sb.AppendLine("CLIPSHELF RUNTIME CRASH - 把這個檔案傳給 ChatGPT");
         sb.AppendLine("====================================================");
-        sb.AppendLine("Version: v2.15.4");
+        sb.AppendLine("Version: v2.15.5");
         sb.AppendLine("Component: ClipShelf.Core");
         sb.AppendLine("Source: " + source);
         sb.AppendLine("Startup stage: " + _stage);

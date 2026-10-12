@@ -59,13 +59,13 @@ check(all('..' not in x.split('\\') and not x.startswith('\\') for x in deletes)
 nsi=(s/'installer/ClipShelf.nsi').read_text()
 check('InstallDir "$LOCALAPPDATA\\Programs\\ClipShelf"' in nsi and not re.search(r'^(Delete|RMDir).*LOCALAPPDATA',nsi,re.M), 'installer leaves separate personal data path intact')
 check('Call CheckClosed' in nsi and 'Call un.CheckClosed' in nsi and 'ClipShelf.Core.SingleInstance' in nsi, 'install/uninstall require clean Core shutdown')
-# 2.15.4 adds only presentation and focus behavior; persistence sources must
+# 2.15.5 changes presentation only; persistence sources must
 # remain byte-identical to the verified 2.15.3 predecessor.
 protected=('ClipShelf/HistoryStore.cs','ClipShelf/BackupService.cs','ClipShelf/ClipItem.cs',
            'ClipShelf/ClipEditing.cs','ClipShelf.Core/CoreStateStore.cs',
            'Shared/SafeState.cs','Shared/AutoBackup.cs')
 for relative in protected:
-    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to 2.15.3 baseline')
+    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to 2.15.4 baseline')
 check('Read(path); // Never replace' in (s/'Shared/SafeState.cs').read_text(), 'fail-closed write revalidates existing history before replace')
 for filename in ('BUILD_EXE.cmd','BUILD_SETUP.cmd'):
     data=(s/filename).read_bytes()
@@ -101,9 +101,22 @@ check('_visibleItems.Remove(item)' in integration and 'CurrentSection().Kind == 
 manager_xaml=ET.parse(s/'ClipShelf/MainWindow.xaml').getroot()
 titles=[x for x in manager_xaml.iter() if x.tag.endswith('TextBlock') and x.attrib.get('Text')=='{Binding Title}']
 editors=[x for x in manager_xaml.iter() if x.tag.endswith('TextBox') and x.attrib.get('{http://schemas.microsoft.com/winfx/2006/xaml}Name')=='ClipTitleEditor']
-check(len(titles)==1 and titles[0].attrib.get('FontSize')=='17' and titles[0].attrib.get('FontWeight')=='Bold'
-      and len(editors)==1 and editors[0].attrib.get('FontSize')=='17' and editors[0].attrib.get('Grid.ColumnSpan')=='2',
-      'custom title and inline editor use distinct full-width 17pt hierarchy')
+check(len(titles)==1 and titles[0].attrib.get('FontSize')=='17' and titles[0].attrib.get('FontWeight')=='SemiBold'
+      and len(editors)==1 and editors[0].attrib.get('FontSize')=='16',
+      'editable custom title has 17pt readable text and aligned inline editor')
+xaml=(s/'ClipShelf/MainWindow.xaml').read_text(encoding='utf-8-sig')
+check('Text="{Binding KindLabel}"' not in xaml and 'Text="{Binding TimeText}"' not in xaml
+      and 'Text="{Binding UsageText}"' not in xaml and 'Text="{Binding CategoryText}"' not in xaml
+      and 'Content="✎ 標題"' not in xaml,
+      'no redundant always-visible type, time, usage, category or rename badges')
+check('Click="RenameTitle_Click"' in xaml and 'Text="{Binding Title}"' in xaml
+      and 'Content="＋ 標題"' in xaml and xaml.count('RelativeSource AncestorType=ListBoxItem') >= 5
+      and 'Text="{Binding EditorText' in xaml,
+      'clickable custom title, contextual add/drag/actions and native selectable content retained')
+manager=(s/'ClipShelf/MainWindow.xaml.cs').read_text(encoding='utf-8-sig')
+check('BuildClipDetailsMenu(item)' in manager and manager.count('BuildClipDetailsMenu(item)') >= 2
+      and all(x in manager for x in ('"建立時間"', '"最近使用"', '"使用次數"', '"類型"', '"來源"', '"分類"')),
+      'card details remain accessible on demand in both normal and deleted contexts')
 check('InlineEditDismissal.ShouldBlockOutsideHide' in ui
       and '!ReferenceEquals(_inlineEditItem, item) || !item.IsInlineEditing || !IsActive' in (s/'ClipShelf/CardInteractions.cs').read_text(),
       'outside deactivation respects inline drafts and delayed editor focus cannot steal external foreground')

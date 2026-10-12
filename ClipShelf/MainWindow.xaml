@@ -353,7 +353,6 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -361,81 +360,80 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <CheckBox Grid.Row="0" Grid.RowSpan="6" Grid.Column="0" Margin="0,2,10,0" VerticalAlignment="Top"
+                                    <CheckBox Grid.Row="0" Grid.RowSpan="5" Grid.Column="0" Margin="0,2,10,0" VerticalAlignment="Top"
                                               Width="22" Height="22" IsChecked="{Binding IsMarked, Mode=TwoWay}"
                                               Visibility="{Binding ShowSelector, Converter={StaticResource BoolToVisibility}}"
                                               Tag="{Binding}" ToolTip="選取這筆" Click="ItemMark_Click"/>
 
+                                    <!-- Compact hierarchy: custom title only; metadata stays under ⋯ > 詳細資訊. -->
                                     <Grid Grid.Row="0" Grid.Column="1">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Width="24" Height="22" Margin="0,0,5,0" CornerRadius="5" Background="#F8FAFC" Cursor="SizeAll"
-                                                Tag="{Binding}" ToolTip="拖曳這筆紀錄到左側資料夾"
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="19" Height="24" CornerRadius="4" Background="#F1F5F9" Cursor="SizeAll"
+                                                Tag="{Binding}" ToolTip="拖曳到左側資料夾"
                                                 PreviewMouseLeftButtonDown="ClipDragHandle_PreviewMouseLeftButtonDown"
                                                 PreviewMouseMove="ClipDragHandle_PreviewMouseMove"
                                                 PreviewMouseLeftButtonUp="ClipDragHandle_PreviewMouseLeftButtonUp">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="Visibility" Value="Visible"/>
+                                            <Border.Style><Style TargetType="Border">
+                                                <Setter Property="Opacity" Value="0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True"><Setter Property="Opacity" Value="0.8"/></DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True"><Setter Property="Opacity" Value="0.8"/></DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style></Border.Style>
+                                            <TextBlock Text="⠿" FontSize="13" Foreground="#64748B" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <Grid Grid.Column="1" Margin="3,0,4,0">
+                                            <Button Tag="{Binding}" HorizontalAlignment="Left" HorizontalContentAlignment="Left"
+                                                    Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                                    ToolTip="點擊修改自訂標題" Click="RenameTitle_Click">
+                                                <Button.Style><Style TargetType="Button"><Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Title}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="IsEnabled" Value="False"/><Setter Property="ToolTip" Value="先從最近刪除復原，再修改標題"/></DataTrigger>
+                                                </Style.Triggers></Style></Button.Style>
+                                                <Border BorderBrush="#0D9488" BorderThickness="2,0,0,0" Padding="8,3" Background="Transparent">
+                                                    <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" Foreground="#172033"
+                                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/>
+                                                </Border>
+                                            </Button>
+                                            <TextBox x:Name="ClipTitleEditor"
+                                                     Text="{Binding DraftTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     FontSize="16" Padding="7,3" AcceptsReturn="False"
+                                                     Foreground="#172033" Background="#F0FDFA" BorderBrush="#0D9488" BorderThickness="1"
+                                                     ToolTip="Enter 儲存 · Esc 取消 · 點外保留草稿"
+                                                     ContextMenuOpening="InlineTitle_ContextMenuOpening">
+                                                <TextBox.Style><Style TargetType="TextBox"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                </Style.Triggers></Style></TextBox.Style>
+                                            </TextBox>
+                                            <Button Content="＋ 標題" Tag="{Binding}" HorizontalAlignment="Left" Padding="4,1" Margin="0"
+                                                    FontSize="11" Foreground="#64748B" Background="Transparent" BorderThickness="0"
+                                                    ToolTip="新增自訂標題" Click="RenameTitle_Click">
+                                                <Button.Style><Style TargetType="Button">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsDeleted}" Value="True">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                        </DataTrigger>
+                                                        <MultiDataTrigger><MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding Title}" Value=""/>
+                                                            <Condition Binding="{Binding IsEditingTitle}" Value="False"/>
+                                                            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True"/>
+                                                        </MultiDataTrigger.Conditions><Setter Property="Visibility" Value="Visible"/></MultiDataTrigger>
+                                                        <MultiDataTrigger><MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding Title}" Value=""/>
+                                                            <Condition Binding="{Binding IsEditingTitle}" Value="False"/>
+                                                            <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True"/>
+                                                        </MultiDataTrigger.Conditions><Setter Property="Visibility" Value="Visible"/></MultiDataTrigger>
+                                                        <DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
                                                     </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <TextBlock Text="⠿" FontSize="14" Foreground="#94A3B8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                        <Border Grid.Column="1" Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="7,2" Margin="0,0,7,0">
-                                            <TextBlock Text="{Binding KindLabel}" Foreground="#475569" FontSize="10.5" FontWeight="SemiBold"/>
-                                        </Border>
-                                        <Button Grid.Column="2" Content="✎ 標題" Tag="{Binding}" Padding="4,1" Margin="0,0,4,0" HorizontalAlignment="Left"
-                                                FontSize="11" Foreground="#64748B" Background="Transparent" BorderThickness="0"
-                                                ToolTip="新增或修改醒目的自訂標題" Click="RenameTitle_Click">
-                                            <Button.Style><Style TargetType="Button"><Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
-                                                <DataTrigger Binding="{Binding IsPendingPurge}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
-                                            </Style.Triggers></Style></Button.Style>
-                                        </Button>
-                                        <StackPanel Grid.Column="3" Orientation="Horizontal">
-                                        <TextBlock Text="  ·  " Foreground="#CBD5E1" FontSize="11" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding TimeText}" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
-                                        <TextBlock Text="  " FontSize="11"/>
-                                        <TextBlock Text="{Binding UsageText}" Foreground="#0F766E" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                        <TextBlock Text="  " FontSize="11"/>
-                                        <TextBlock MaxWidth="80" TextTrimming="CharacterEllipsis" ToolTip="{Binding CategoryText}" Text="{Binding CategoryText}" Foreground="#0D9488" FontSize="11" VerticalAlignment="Center"/>
-                                        <TextBlock Text="  " FontSize="11"/>
-                                        <TextBlock Text="{Binding DeletedAtText}" Foreground="#BE123C" FontSize="11" VerticalAlignment="Center"/>
-                                        </StackPanel>
+                                                </Style></Button.Style>
+                                            </Button>
+                                        </Grid>
                                     </Grid>
-
-                                    <!-- Dedicated custom title line. No extra height for cards without titles. -->
-                                    <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,1" Padding="10,6"
-                                            Background="#EFFBF8" BorderBrush="#0D9488" BorderThickness="3,0,0,0" CornerRadius="5">
-                                        <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Visible"/><Style.Triggers>
-                                            <DataTrigger Binding="{Binding Title}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
-                                            <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
-                                        </Style.Triggers></Style></Border.Style>
-                                        <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="Bold" Foreground="#172033"
-                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/>
-                                    </Border>
-                                    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" x:Name="ClipTitleEditor"
-                                             Text="{Binding DraftTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                             HorizontalAlignment="Stretch" Margin="0,8,0,1" Padding="9,5" FontSize="17" FontWeight="SemiBold"
-                                             Foreground="#172033" Background="#F0FDFA" BorderBrush="#0D9488" BorderThickness="1"
-                                             AcceptsReturn="False" ToolTip="Enter 儲存 · Esc 取消 · 點到其他程式會保留草稿並縮起"
-                                             ContextMenuOpening="InlineTitle_ContextMenuOpening">
-                                        <TextBox.Style><Style TargetType="TextBox"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsEditingTitle}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
-                                        </Style.Triggers></Style></TextBox.Style>
-                                    </TextBox>
 
                                     <!-- The right-side blank area is card chrome, separate from selectable text.
                                          Ctrl/Shift clicks use Windows-style multi-select; an ordinary click on an
                                          expanded card can still collapse it without stealing text selection. -->
-                                    <Border Grid.Row="2" Grid.RowSpan="3" Grid.Column="2" Background="Transparent"
+                                    <Border Grid.Row="1" Grid.RowSpan="3" Grid.Column="2" Background="Transparent"
                                             Margin="10,4,0,0" Tag="{Binding}" Cursor="Hand"
                                             ToolTip="右側空白：Ctrl 單選／Shift 連選；展開時一般點擊可收起"
                                             MouseLeftButtonDown="CollapseContentBlankArea_MouseLeftButtonDown"/>
@@ -443,26 +441,35 @@
                                     <Grid Grid.Row="0" Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Top">
                                         <StackPanel Orientation="Horizontal">
                                             <StackPanel.Style>
-                                                <Style TargetType="StackPanel">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsDeleted}" Value="True">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
+                                                <Style TargetType="StackPanel"><Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers><DataTrigger Binding="{Binding IsDeleted}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
                                                 </Style>
                                             </StackPanel.Style>
-                                            <Button Style="{StaticResource CardActionButton}" Content="{Binding FavoriteGlyph}" Tag="{Binding}" FontSize="20" Foreground="#0EA5E9" ToolTip="收藏" Click="FavoriteButton_Click"/>
-                                            <Button Content="✎" Tag="{Binding}" FontSize="17" Width="30" Height="28" Padding="0"
-                                                    Foreground="#0F766E" Background="Transparent" BorderThickness="0" Focusable="False"
-                                                    ToolTip="編輯正文；也可選取文字後按 Delete 或直接輸入" Click="EditBody_Click">
-                                                <Button.Style><Style TargetType="Button"><Setter Property="Visibility" Value="Collapsed"/>
-                                                    <Style.Triggers><DataTrigger Binding="{Binding Kind}" Value="Text"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
-                                                </Style></Button.Style>
-                                            </Button>
-                                            <Button Style="{StaticResource CardActionButton}" Content="▣" Tag="{Binding}" FontSize="17" Foreground="#0EA5E9" ToolTip="複製" Click="CopyButton_Click"/>
-                                            <Button Style="{StaticResource CardDangerActionButton}" Content="−" Tag="{Binding}" FontSize="16" ToolTip="依目前區域移出或移到最近刪除；更多選單有完整動作" Click="DeleteButton_Click"/>
-                                            <Button Style="{StaticResource CardActionButton}" Content="⋯" Tag="{Binding}" FontSize="20" ToolTip="更多" Click="MoreButton_Click"/>
+                                            <Button Style="{StaticResource CardActionButton}" Content="{Binding FavoriteGlyph}" Tag="{Binding}"
+                                                    FontSize="20" Foreground="#0EA5E9" ToolTip="收藏／取消收藏" Click="FavoriteButton_Click"/>
+                                            <!-- Less-used actions remain reachable through ⋯, but surface on hover/selection. -->
+                                            <StackPanel Orientation="Horizontal">
+                                                <StackPanel.Style><Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style></StackPanel.Style>
+                                                <Button Content="✎" Tag="{Binding}" FontSize="17" Width="30" Height="28" Padding="0"
+                                                        Foreground="#0F766E" Background="Transparent" BorderThickness="0" Focusable="False"
+                                                        ToolTip="編輯正文" Click="EditBody_Click">
+                                                    <Button.Style><Style TargetType="Button"><Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers><DataTrigger Binding="{Binding Kind}" Value="Text"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                                                    </Style></Button.Style>
+                                                </Button>
+                                                <Button Style="{StaticResource CardActionButton}" Content="▣" Tag="{Binding}"
+                                                        FontSize="17" Foreground="#0EA5E9" ToolTip="複製" Click="CopyButton_Click"/>
+                                                <Button Style="{StaticResource CardDangerActionButton}" Content="−" Tag="{Binding}"
+                                                        FontSize="16" ToolTip="移出此區域或移到最近刪除（可恢復）" Click="DeleteButton_Click"/>
+                                            </StackPanel>
+                                            <Button Style="{StaticResource CardActionButton}" Content="⋯" Tag="{Binding}"
+                                                    FontSize="20" ToolTip="更多操作／詳細資訊" Click="MoreButton_Click"/>
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal">
                                             <StackPanel.Style>
@@ -491,7 +498,7 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <WrapPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0"
+                                    <WrapPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0"
                                                 Visibility="{Binding IsInlineEditing, Converter={StaticResource BoolToVisibility}}">
                                         <TextBlock Foreground="#0F766E" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="編輯文字中 · Ctrl+Enter 儲存 · Esc 取消"/>
@@ -504,7 +511,7 @@
                                                 Background="#F8FAFC" BorderBrush="#E2E8F0" Foreground="#64748B"/>
                                     </WrapPanel>
 
-                                    <TextBox x:Name="ClipSelectableText" Grid.Row="3" Grid.Column="1" Text="{Binding EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox x:Name="ClipSelectableText" Grid.Row="2" Grid.Column="1" Text="{Binding EditorText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                              IsReadOnly="{Binding IsTextReadOnly}"
                                              IsReadOnlyCaretVisible="True" AcceptsReturn="True" IsUndoEnabled="True"
                                              BorderThickness="0" Padding="0"
@@ -536,12 +543,12 @@
                                             </Style>
                                         </TextBox.Style>
                                     </TextBox>
-                                    <Button Grid.Row="4" Grid.Column="1" Content="收起 ↑" Tag="{Binding}" HorizontalAlignment="Left"
+                                    <Button Grid.Row="3" Grid.Column="1" Content="收起 ↑" Tag="{Binding}" HorizontalAlignment="Left"
                                             Margin="0,6,0,0" Padding="8,3" FontSize="10.5" Foreground="#0F766E" Background="#F0FDFA"
                                             BorderBrush="#99F6E4" BorderThickness="1" Cursor="Hand"
                                             Visibility="{Binding IsContentExpanded, Converter={StaticResource BoolToVisibility}}"
                                             ToolTip="收起完整內容預覽" Click="CollapseContentButton_Click"/>
-                                    <StackPanel Grid.Row="5" Grid.Column="1"><TextBlock Text="{Binding SearchExcerpt}" TextWrapping="Wrap" MaxHeight="44" Foreground="#0F766E" FontSize="12" Margin="0,5,0,0"/>
+                                    <StackPanel Grid.Row="4" Grid.Column="1"><TextBlock Text="{Binding SearchExcerpt}" TextWrapping="Wrap" MaxHeight="44" Foreground="#0F766E" FontSize="12" Margin="0,5,0,0"/>
                                     <Image Grid.Column="1" Source="{Binding PreviewImage}" MaxHeight="180" MaxWidth="280" Stretch="Uniform" HorizontalAlignment="Left" Margin="0,8,0,0"/></StackPanel>
                                 </Grid>
                             </DataTemplate>

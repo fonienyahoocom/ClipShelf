@@ -1352,6 +1352,28 @@ public partial class MainWindow : Window
         }
     }
 
+    private static MenuItem BuildClipDetailsMenu(ClipItem item)
+    {
+        // Metadata stays available on demand, without competing with the actual clip.
+        var info = new MenuItem { Header = "ⓘ  詳細資訊" };
+        void Add(string label, string value)
+        {
+            var shortValue = value.Length > 72 ? value[..72] + "…" : value;
+            info.Items.Add(new MenuItem { Header = label + "：" + shortValue, ToolTip = value, IsEnabled = false });
+        }
+        Add("類型", item.KindLabel);
+        Add("建立時間", item.CreatedAt.ToString("yyyy/MM/dd HH:mm:ss"));
+        Add("最近使用", item.LastUsedAt.ToString("yyyy/MM/dd HH:mm:ss"));
+        Add("使用次數", item.UseCount.ToString());
+        Add("分類", string.IsNullOrWhiteSpace(item.Category) ? "未分類" : item.Category);
+        Add("來源", string.IsNullOrWhiteSpace(item.SourceApp) ? "未知" : item.SourceApp);
+        if (!string.IsNullOrWhiteSpace(item.SourceTitle)) Add("來源標題", item.SourceTitle);
+        Add("收藏", item.Favorite ? "是" : "否");
+        Add("釘選", item.IsPinned ? "是" : "否");
+        if (item.IsDeleted) Add("刪除時間", item.DeletedAt?.ToString("yyyy/MM/dd HH:mm:ss") ?? "未知");
+        return info;
+    }
+
     private void ShowMoreMenu(ClipItem item, FrameworkElement owner)
     {
         var menu = new ContextMenu();
@@ -1369,6 +1391,8 @@ public partial class MainWindow : Window
             menu.Items.Add(restore);
             menu.Items.Add(new Separator());
             menu.Items.Add(permanentDelete);
+            menu.Items.Add(new Separator());
+            menu.Items.Add(BuildClipDetailsMenu(item));
 
             owner.ContextMenu = menu;
             _suspendAutoHide++;
@@ -1402,6 +1426,7 @@ public partial class MainWindow : Window
         var rename = new MenuItem { Header = "✎  重新命名標題" };
         rename.Click += (_, _) => BeginInlineTitleEdit(item);
         menu.Items.Add(rename);
+        menu.Items.Add(BuildClipDetailsMenu(item));
 
         var category = BuildMoveToCategoryMenu(item);
         var favoriteFolderMenu = BuildMoveToFlagFolderMenu(item, "Favorite");

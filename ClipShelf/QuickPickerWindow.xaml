@@ -40,13 +40,16 @@
    <ListBox.ContextMenu><ContextMenu><MenuItem Header="移到最近刪除（可恢復）" Click="DeleteSelected_Click"/></ContextMenu></ListBox.ContextMenu>
    <ListBox.ItemTemplate><DataTemplate>
     <Grid Height="36" ToolTip="{Binding Preview}">
-     <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions>
+     <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="26"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions>
      <Grid><TextBlock Text="{Binding Glyph}" FontSize="19" VerticalAlignment="Center"/><Image Source="{Binding Thumbnail}" Width="28" Height="28" Stretch="Uniform"/></Grid>
      <StackPanel Grid.Column="1" VerticalAlignment="Center">
       <TextBlock Text="{Binding Summary}" TextTrimming="CharacterEllipsis" FontSize="13.5"/>
       <TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis" FontSize="10.5" Foreground="#708090"/>
      </StackPanel>
-     <Button Grid.Column="2" Content="×" ToolTip="將這筆移到最近刪除（可恢復）" PreviewMouseLeftButtonDown="Delete_MouseDown" Click="DeleteRow_Click" Padding="2" BorderThickness="0" Background="Transparent" Foreground="#708090"/>
+     <Button Grid.Column="2" Content="📌" Opacity="{Binding PinOpacity}" ToolTip="{Binding PinTip}"
+             Click="PinRow_Click" Padding="2" BorderThickness="0" Background="Transparent"
+             PreviewMouseLeftButtonDown="Delete_MouseDown"/>
+     <Button Grid.Column="3" Content="×" ToolTip="將這筆移到最近刪除（可恢復）" PreviewMouseLeftButtonDown="Delete_MouseDown" Click="DeleteRow_Click" Padding="2" BorderThickness="0" Background="Transparent" Foreground="#708090"/>
     </Grid>
    </DataTemplate></ListBox.ItemTemplate>
   </ListBox>
@@ -56,7 +59,7 @@
     <TextBlock x:Name="SelectionCount" Foreground="#0F766E" VerticalAlignment="Center"/>
    </DockPanel>
    <TextBlock x:Name="Status" Foreground="#0F766E" TextWrapping="Wrap" FontSize="12"/>
-   <TextBlock Text="Shift/Ctrl＋點選 多選 · Delete 刪除 · Enter 貼上 · Esc 收合 · F3 預覽" FontSize="10.5" Foreground="#708090" Margin="0,4,0,0"/>
+   <TextBlock Text="📌 釘選置頂／再按取消 · Shift/Ctrl 多選 · Delete 刪除 · Enter 貼上 · Esc 收合 · F3 預覽" TextWrapping="Wrap" FontSize="10.5" Foreground="#708090" Margin="0,4,0,0"/>
   </StackPanel>
  </Grid>
 </Window>

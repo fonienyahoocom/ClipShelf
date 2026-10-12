@@ -259,7 +259,10 @@ public partial class MainWindow : Window
         if (keyboardSwitch || DateTime.UtcNow < _keyboardSwitcherUntil)
             return;
 
-        if (_suspendAutoHide > 0 || _shortcutHidden || !IsVisible) return;
+        // The one suspension owned by an inline draft must not trap the window
+        // when another application is clicked. Extra suspensions guard menus/dialogs.
+        if (InlineEditDismissal.ShouldBlockOutsideHide(_suspendAutoHide, _inlineEditItem?.IsInlineEditing == true)
+            || _shortcutHidden || !IsVisible) return;
 
         if (_switchNonInterferenceMode)
         {

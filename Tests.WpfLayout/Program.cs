@@ -42,6 +42,7 @@ static class Program
             app.InitializeComponent();
             app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             Stage("after WPF Application; before MainWindow");
+            Environment.SetEnvironmentVariable("CLIPSHELF_GEOMETRY_TEST","1");
 
             var window = new MainWindow { Width = 1120, Height = 780, ShowInTaskbar = false };
             Stage("after MainWindow construction");

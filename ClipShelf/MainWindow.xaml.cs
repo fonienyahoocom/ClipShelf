@@ -113,15 +113,26 @@ public partial class MainWindow : Window
     private bool _switchNonInterferenceMode;
     private string _contentKindFilter = "All";
 
+    private static void LayoutConstructorTrace(string label)
+    {
+        if (Environment.GetEnvironmentVariable("CLIPSHELF_GEOMETRY_TEST") != "1") return;
+        Directory.CreateDirectory("validation");
+        File.AppendAllText("validation/layout-stage.log", $"{DateTime.UtcNow:O} ctor {label}\\n");
+    }
+
     public MainWindow()
     {
+        LayoutConstructorTrace("entered");
         InitializeComponent();
+        LayoutConstructorTrace("InitializeComponent complete");
         TrackInlineComposition();
         _previousForegroundWindow = ParseReturnWindowFromArgs();
         HistoryList.ItemsSource = _visibleItems;
         CategoryList.ItemsSource = _categories;
 
+        LayoutConstructorTrace("before HistoryStore.Load");
         var loaded = _store.Load();
+        LayoutConstructorTrace("HistoryStore.Load complete");
         _settings = loaded.Settings ?? new AppSettings();
         // One-time recovery for 2.15.7 installations that persisted the broken grid.
         // Reopen safely in vertical mode, then let the user opt back into fixed paging.
@@ -131,6 +142,7 @@ public partial class MainWindow : Window
             _settings.GridLayoutVersion = 1;
         }
         ApplyCardLayout();
+        LayoutConstructorTrace("ApplyCardLayout complete");
         _capturePaused = _settings.CapturePaused;
         _switchNonInterferenceMode = _settings.SwitchNonInterferenceMode;
 
@@ -145,7 +157,9 @@ public partial class MainWindow : Window
             _settings.HistoryModelVersion = 1;
         }
 
+        LayoutConstructorTrace("before saved window layout");
         ApplySavedWindowLayout();
+        LayoutConstructorTrace("after saved window layout");
         foreach (var item in loaded.Items.OrderByDescending(x => x.LastUsedAt)) _allItems.Add(item);
         FinalizeExpiredPendingPurges(queueSave: false);
         PurgeExpiredTrash(queueSave: false);
@@ -168,9 +182,12 @@ public partial class MainWindow : Window
         // folders (for example prompt / 占星技巧) get the same drag handle as new ones.
         RecoverFolderPathsFromItems();
         NormalizeFolderOrder();
+        LayoutConstructorTrace("before RebuildFolderSidebar");
         RebuildFolderSidebar();
+        LayoutConstructorTrace("after RebuildFolderSidebar");
 
         CategoryList.SelectedIndex = 0;
+        LayoutConstructorTrace("before CoreBridge");
         _coreBridge = new CoreBridge(
             () => Dispatcher.BeginInvoke(new Action(ShutdownUi)),
             () => Dispatcher.BeginInvoke(new Action(ToggleFastHotkey)),
@@ -179,6 +196,7 @@ public partial class MainWindow : Window
             () => Dispatcher.BeginInvoke(new Action(EnableSwitchNonInterferenceMode)),
             () => Dispatcher.BeginInvoke(new Action(RestoreNormalSwitchMode)));
 
+        LayoutConstructorTrace("CoreBridge complete");
         SourceInitialized += MainWindow_SourceInitialized;
         Activated += (_, _) =>
         {
@@ -200,15 +218,22 @@ public partial class MainWindow : Window
         SizeChanged += (_, _) => QueueSave();
         LocationChanged += (_, _) => QueueSave();
         _allItems.CollectionChanged += AllItems_CollectionChanged;
+        LayoutConstructorTrace("before TrimHistory/RefreshVisibleItems");
         TrimHistory();
         RefreshVisibleItems();
+        LayoutConstructorTrace("RefreshVisibleItems complete");
         UpdateCaptureUi();
         UpdateContentFilterUi();
         SyncViewModeControls();
         UpdateModeStatusUi();
+        LayoutConstructorTrace("before InitializeProductFeatures");
         InitializeProductFeatures();
+        LayoutConstructorTrace("after InitializeProductFeatures");
         QueueSave();
+        LayoutConstructorTrace("QueueSave complete");
+        LayoutConstructorTrace("before UiServer");
         _uiServer = new ClipShelfShared.UiServer(request => Dispatcher.InvokeAsync(() => HandleUiRequest(request)).Task);
+        LayoutConstructorTrace("UiServer complete");
     }
 
     private void MainWindow_SourceInitialized(object? sender, EventArgs e)

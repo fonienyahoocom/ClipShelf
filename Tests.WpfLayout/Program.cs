@@ -37,6 +37,8 @@ static class Program
         Stage("ENTER Main");
         try
         {
+            if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true")
+                throw new InvalidOperationException("Native geometry probe is restricted to isolated GitHub Windows runners; never load a user's personal history");
             Stage("before WPF Application");
             // Never instantiate ClipShelf.App here: its OnStartup launches a SECOND
             // MainWindow when the test pumps Dispatcher, competing for UiServer.
@@ -56,6 +58,13 @@ static class Program
 
             var window = new MainWindow { Width = 1120, Height = 780, ShowInTaskbar = false };
             Stage("after MainWindow construction");
+            // The same GitHub runner may retain the previous process's preference.
+            // Force both the old and new production windows to a common list start.
+            var actualSettings = (AppSettings?)typeof(MainWindow).GetField("_settings", Private)?.GetValue(window)
+                ?? throw new InvalidOperationException("production settings unavailable");
+            actualSettings.GridLayout = false;
+            typeof(MainWindow).GetMethod("ApplyCardLayout", Private)?.Invoke(window, null);
+            Stage("explicit initial layout reset to vertical");
             var list = (ListBox?)window.FindName("HistoryList")
                 ?? throw new InvalidOperationException("Actual HistoryList not found");
             var items = (ObservableCollection<ClipItem>?)typeof(MainWindow).GetField("_visibleItems", Private)?.GetValue(window)

@@ -47,10 +47,23 @@ jobs:
           DOTNET_CLI_TELEMETRY_OPTOUT: '1'
           DOTNET_NOLOGO: '1'
         run: |
-          dotnet run --project Tests.WpfLayout/Tests.WpfLayout.csproj --configuration Release *> validation/layout-geometry.log
-          $code = $LASTEXITCODE
-          Get-Content validation/layout-geometry.log | Select-Object -Last 80
-          if ($code -ne 0) { throw "Actual WPF geometry probe failed; see validation/layout-geometry.log" }
+          dotnet build Tests.WpfLayout/Tests.WpfLayout.csproj --configuration Release *> validation/layout-build.log
+          $buildCode = $LASTEXITCODE
+          Get-Content validation/layout-build.log | Select-Object -Last 40
+          if ($buildCode -ne 0) { throw "WPF geometry harness failed to compile" }
+          $exe = Join-Path $env:GITHUB_WORKSPACE "Tests.WpfLayout/bin/Release/net8.0-windows/Tests.WpfLayout.exe"
+          if (!(Test-Path $exe)) { throw "Built geometry test executable missing" }
+          $p = Start-Process -FilePath $exe -WorkingDirectory $env:GITHUB_WORKSPACE -PassThru -NoNewWindow -RedirectStandardOutput "validation/layout-out.log" -RedirectStandardError "validation/layout-err.log"
+          if (!$p.WaitForExit(60000)) {
+            try { $p.Kill($true) } catch { }
+            if (Test-Path validation/layout-stage.log) { Get-Content validation/layout-stage.log }
+            throw "Actual WPF geometry timed out after 60 seconds; inspect stage log"
+          }
+          $code = $p.ExitCode
+          if (Test-Path validation/layout-stage.log) { Get-Content validation/layout-stage.log }
+          if (Test-Path validation/layout-out.log) { Get-Content validation/layout-out.log | Select-Object -Last 60 }
+          if (Test-Path validation/layout-err.log) { Get-Content validation/layout-err.log | Select-Object -Last 30 }
+          if ($code -ne 0) { throw "Actual WPF geometry probe failed ($code)" }
       - name: Install Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:

@@ -24,18 +24,27 @@ static class Program
     private static readonly BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
     private static readonly List<object> Evidence = new();
     private static int Assertions;
+    private static void Stage(string label)
+    {
+        Directory.CreateDirectory("validation");
+        File.AppendAllText("validation/layout-stage.log", $"{DateTime.UtcNow:O} {label}\n");
+    }
 
     [STAThread]
     public static int Main()
     {
         int exit = 0;
+        Stage("ENTER Main");
         try
         {
+            Stage("before WPF Application");
             var app = new App();
             app.InitializeComponent();
             app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            Stage("after WPF Application; before MainWindow");
 
             var window = new MainWindow { Width = 1120, Height = 780, ShowInTaskbar = false };
+            Stage("after MainWindow construction");
             var list = (ListBox?)window.FindName("HistoryList")
                 ?? throw new InvalidOperationException("Actual HistoryList not found");
             var items = (ObservableCollection<ClipItem>?)typeof(MainWindow).GetField("_visibleItems", Private)?.GetValue(window)
@@ -45,11 +54,17 @@ static class Program
                 items.Add(new ClipItem { Title = $"Layout sample {i + 1}", Text = $"short text {i + 1}",
                     Kind = "Text", HistoryVisible = true, LastUsedAt = DateTime.Now.AddMinutes(-i) });
 
+            Stage("before Window.Show");
             window.Show();
+            Stage("after Window.Show; before first dispatcher Pump");
             Pump(window);
+            Stage("after first dispatcher Pump");
             Verify(window, list, "initial-vertical", false, false);
+            Stage("before first GridLayoutButton");
             Press(window, "GridLayoutButton");
+            Stage("after first GridLayoutButton; before Pump");
             Pump(window);
+            Stage("after first grid Pump");
             Verify(window, list, "three-short-cards-wide", true, true);
 
             for (int i = 0; i < 20; i++)
@@ -83,11 +98,13 @@ static class Program
                 sourceCount = items.Count, pass = true });
             Verify(window, list, "many-records-grid", true, true);
 
+            Stage("all layout verifications finished");
             Console.WriteLine($"WPF GEOMETRY PASS: {Assertions} actual-window assertions");
         }
         catch (Exception ex)
         {
             exit = 1;
+            Stage("FAIL " + ex.GetType().Name + " " + ex.Message);
             Console.Error.WriteLine("WPF GEOMETRY FAIL: " + ex);
         }
         finally

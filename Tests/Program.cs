@@ -105,6 +105,12 @@ try {
     Check(edit.Text==other.Text && other.IsDeleted,"deleted duplicate does not block an active edit or revive deleted data");
     edit.IsDeleted=true;rejected=false;try {ClipEditing.SaveTitle(edit,"不得改名",PersistEdit);} catch(InvalidOperationException) {rejected=true;}
     Check(rejected && edit.Title=="","deleted record cannot be renamed until restored");edit.IsDeleted=false;
+    var oldLayout=JsonSerializer.Deserialize<AppSettings>("{}")!;
+    Check(!new AppSettings().GridLayout && !oldLayout.GridLayout,"legacy manager remains vertical");
+    var gridSettings=new AppSettings {GridLayout=true,CompactView=true,PreferQuickPicker=false};
+    var gridReload=JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(gridSettings.Clone()))!;
+    Check(gridReload.GridLayout && gridReload.CompactView && !gridReload.PreferQuickPicker,
+        "grid layout setting survives clone and JSON without changing A/B or picker preference");
     var mode=new AppSettings {CompactView=true};
     Check(!new AppSettings().CompactView && mode.Clone().CompactView && JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(mode))!.CompactView,"new installs default A and existing B setting survives clone and reload");
     // v2.14.2: production binding state used by native Delete/typing entry.

@@ -6,6 +6,8 @@ public sealed class AppSettings
 {
     public System.DateTime? CaptureResumeAt { get; set; }
     public bool CompactView { get; set; }
+    // Independent manager arrangement; legacy settings default to one vertical column.
+    public bool GridLayout { get; set; } = false;
     public double ReadingFontSize { get; set; } = 16;
     public bool GlobalSearch { get; set; } = true;
     public bool CaptureText { get; set; } = true;
@@ -78,6 +80,7 @@ public sealed class AppSettings
         PickerHotkeyModifiers = PickerHotkeyModifiers, PickerHotkeyKey = PickerHotkeyKey,
         CaptureResumeAt = CaptureResumeAt,
         CompactView = CompactView,
+        GridLayout = GridLayout,
         ReadingFontSize = ReadingFontSize,
         GlobalSearch = GlobalSearch,
         CaptureText = CaptureText,

@@ -8,6 +8,8 @@ public sealed class AppSettings
     public bool CompactView { get; set; }
     // Independent manager arrangement; legacy settings default to one vertical column.
     public bool GridLayout { get; set; } = false;
+    // v2.15.8 migration: old non-paged grid sessions reopen vertical once.
+    public int GridLayoutVersion { get; set; } = 0;
     public double ReadingFontSize { get; set; } = 16;
     public bool GlobalSearch { get; set; } = true;
     public bool CaptureText { get; set; } = true;
@@ -81,6 +83,7 @@ public sealed class AppSettings
         CaptureResumeAt = CaptureResumeAt,
         CompactView = CompactView,
         GridLayout = GridLayout,
+        GridLayoutVersion = GridLayoutVersion,
         ReadingFontSize = ReadingFontSize,
         GlobalSearch = GlobalSearch,
         CaptureText = CaptureText,

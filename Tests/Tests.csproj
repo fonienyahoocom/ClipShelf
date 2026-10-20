@@ -4,6 +4,7 @@
 <Compile Include="../Shared/*.cs" />
 <Compile Include="../ClipShelf.Core/CoreStateStore.cs" />
 <Compile Include="../ClipShelf/ClipItem.cs" />
+<Compile Include="../ClipShelf/CardGridPaging.cs" />
 <Compile Include="../ClipShelf/ClipEditing.cs" /><Compile Include="../ClipShelf/QuickPickerModel.cs" />
 <Compile Include="../ClipShelf/AppSettings.cs" />
 <Compile Include="../ClipShelf/SidebarItem.cs" />

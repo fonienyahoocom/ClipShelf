@@ -300,6 +300,11 @@
                                           Content="☰ 直排" Margin="7,0,2,0" ToolTip="單欄直排" Click="CardLayout_Click"/>
                              <RadioButton x:Name="GridLayoutButton" GroupName="CardLayoutMode" Style="{StaticResource ViewModeButton}"
                                           Content="▦ 方塊" Margin="0,0,3,0" ToolTip="雙欄方塊，編輯時展開" Click="CardLayout_Click"/>
+                             <StackPanel x:Name="GridPagingPanel" Orientation="Horizontal" Margin="5,0,0,0" Visibility="Collapsed" VerticalAlignment="Center">
+                                 <Button x:Name="GridPreviousButton" Content="‹" Height="28" Padding="9,0" Click="GridPrevious_Click" ToolTip="上一頁方塊"/>
+                                 <TextBlock x:Name="GridPageText" Text="1 / 1 頁" MinWidth="58" Margin="5,0" VerticalAlignment="Center" TextAlignment="Center" FontSize="11" Foreground="#475569"/>
+                                 <Button x:Name="GridNextButton" Content="›" Height="28" Padding="9,0" Click="GridNext_Click" ToolTip="下一頁方塊"/>
+                             </StackPanel>
                              <Button Content="檢視 / 工具 ▾" Click="ProductMenu_Click" Padding="8,3" Margin="6,0"/>
                             <TextBlock x:Name="SectionHintText" Visibility="Collapsed" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="10.5" Foreground="#94A3B8"
                                        Text="歷史＝最近複製 / 擷取；刪除歷史不會刪掉已整理的原資料"/>

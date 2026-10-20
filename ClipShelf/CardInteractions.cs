@@ -50,45 +50,112 @@ public partial class MainWindow
 
     private void ApplyCardLayout()
     {
+        // WPF WrapPanel eagerly realizes every card. ALWAYS replace ItemsSource with
+        // the 24-card bounded projection BEFORE switching to the WrapPanel template.
+        if (_settings.GridLayout)
+        {
+            HistoryList.ItemsSource = _gridPageItems;
+            HistoryList.ItemsPanel = (ItemsPanelTemplate)FindResource("GridCardPanel");
+        }
+        else
+        {
+            HistoryList.ItemsPanel = (ItemsPanelTemplate)FindResource("VerticalCardPanel");
+            HistoryList.ItemsSource = _visibleItems;
+        }
         HistoryList.Tag = _settings.GridLayout;
-        HistoryList.ItemsPanel = (ItemsPanelTemplate)FindResource(_settings.GridLayout ? "GridCardPanel" : "VerticalCardPanel");
+        GridPagingPanel.Visibility = _settings.GridLayout ? Visibility.Visible : Visibility.Collapsed;
         SyncCardLayoutControls();
+        UpdateGridPagerControls();
     }
+
+    private void UpdateGridPagerControls()
+    {
+        var count = _visibleItems.Count;
+        _gridPageIndex = CardGridPaging.ClampPage(_gridPageIndex, count);
+        GridPageText.Text = count == 0 ? "0 / 0 頁" : $"{_gridPageIndex + 1} / {CardGridPaging.PageCount(count)} 頁";
+        GridPreviousButton.IsEnabled = _gridPageIndex > 0;
+        GridNextButton.IsEnabled = _gridPageIndex + 1 < CardGridPaging.PageCount(count);
+    }
+
+    private void RefreshGridPage(Guid? anchorId = null)
+    {
+        if (!_settings.GridLayout) return;
+        if (anchorId.HasValue)
+        {
+            var anchorIndex = _visibleItems.ToList().FindIndex(x => x.Id == anchorId.Value);
+            // Filter or category changed: don't keep an unrelated, potentially stale page.
+            _gridPageIndex = anchorIndex < 0 ? 0 : CardGridPaging.PageForIndex(anchorIndex, _visibleItems.Count);
+        }
+        _gridPageIndex = CardGridPaging.ClampPage(_gridPageIndex, _visibleItems.Count);
+        var previouslySelected = HistoryList.SelectedItem as ClipItem;
+        var page = CardGridPaging.TakePage(_visibleItems, _gridPageIndex);
+        _gridPageItems.Clear();
+        foreach (var item in page) _gridPageItems.Add(item);
+        UpdateGridPagerControls();
+        if (ReferenceEquals(HistoryList.ItemsSource, _gridPageItems))
+            HistoryList.SelectedItem = previouslySelected != null && _gridPageItems.Contains(previouslySelected)
+                ? previouslySelected : _gridPageItems.FirstOrDefault();
+    }
+
+    private void ChangeGridPage(int direction)
+    {
+        if (!_settings.GridLayout || !ResolveInlineEdit()) return;
+        var next = CardGridPaging.ClampPage(_gridPageIndex + direction, _visibleItems.Count);
+        if (next == _gridPageIndex) return;
+        _gridPageIndex = next;
+        RefreshGridPage();
+        Dispatcher.BeginInvoke(new Action(() =>
+            FindVisualChild<ScrollViewer>(HistoryList)?.ScrollToTop()), DispatcherPriority.Loaded);
+    }
+
+    private void GridPrevious_Click(object sender, RoutedEventArgs e) => ChangeGridPage(-1);
+    private void GridNext_Click(object sender, RoutedEventArgs e) => ChangeGridPage(1);
 
     private void SetGridLayout(bool grid)
     {
         if (_settings.GridLayout == grid) { SyncCardLayoutControls(); return; }
-        // Switching panels can recycle native editor controls. Resolve changes first.
         if (!ResolveInlineEdit()) { SyncCardLayoutControls(); return; }
-        var viewer = FindVisualChild<ScrollViewer>(HistoryList);
-        var offset = viewer?.VerticalOffset ?? 0;
-        ClipItem? anchorItem = null;
-        var panel = FindVisualChild<VirtualizingStackPanel>(HistoryList) as Panel
+
+        var oldSelection = HistoryList.SelectedItem as ClipItem;
+        // Find the first *visible* item instead of relying on the selected item,
+        // which may still point to the first row after scrolling far down.
+        ClipItem? anchor = null;
+        var oldPanel = FindVisualChild<VirtualizingStackPanel>(HistoryList) as Panel
             ?? FindVisualChild<WrapPanel>(HistoryList);
-        if (panel != null)
+        if (oldPanel != null)
         {
-            foreach (var row in panel.Children.OfType<ListBoxItem>())
+            foreach (var child in oldPanel.Children.OfType<ListBoxItem>())
             {
-                if (row.DataContext is not ClipItem clip) continue;
+                if (child.DataContext is not ClipItem item) continue;
                 try
                 {
-                    var y = row.TransformToAncestor(HistoryList).Transform(new Point()).Y;
-                    if (y + row.ActualHeight > 0 && y < HistoryList.ActualHeight)
-                    { anchorItem = clip; break; }
+                    var y = child.TransformToAncestor(HistoryList).Transform(new Point()).Y;
+                    if (y + child.ActualHeight > 0 && y < HistoryList.ActualHeight)
+                    { anchor = item; break; }
                 }
                 catch (InvalidOperationException) { }
             }
         }
+        anchor ??= oldSelection;
+        var anchorIndex = anchor == null ? 0 : _visibleItems.IndexOf(anchor);
         _settings.GridLayout = grid;
+        if (grid)
+        {
+            _gridPageIndex = CardGridPaging.PageForIndex(anchorIndex, _visibleItems.Count);
+            RefreshGridPage();
+        }
         ApplyCardLayout();
+        if (oldSelection != null && HistoryList.Items.Contains(oldSelection))
+            HistoryList.SelectedItem = oldSelection;
+        else if (HistoryList.Items.Count > 0) HistoryList.SelectedIndex = 0;
         QueueSave();
-        // Keep the visible neighborhood and selection identity stable across the panel change.
+
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            HistoryList.UpdateLayout();
-            if (anchorItem != null && _visibleItems.Contains(anchorItem))
-                HistoryList.ScrollIntoView(anchorItem);
-            else FindVisualChild<ScrollViewer>(HistoryList)?.ScrollToVerticalOffset(offset);
+            if (anchor != null && HistoryList.Items.Contains(anchor))
+                HistoryList.ScrollIntoView(anchor);
+            else
+                FindVisualChild<ScrollViewer>(HistoryList)?.ScrollToTop();
         }), DispatcherPriority.Loaded);
     }
 

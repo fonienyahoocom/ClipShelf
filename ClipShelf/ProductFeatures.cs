@@ -92,7 +92,7 @@ public partial class MainWindow
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClipShelf", "auto-backups");
             Directory.CreateDirectory(dir); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dir) { UseShellExecute = true });
         });
-        Add("關於 ClipShelf 2.15.7", () => MessageBox.Show(this, "ClipShelf 2.15.7\n本機剪貼庫 · 搜尋 · 整理 · 文字組合\n\nCtrl+~ 開啟 / 隱藏\nCtrl+F 搜尋，方向鍵選擇，Enter 貼上\n卡片原地編輯：Enter 換行，Ctrl+Enter 儲存，Esc 取消\n標題改名：Enter 儲存，Esc 取消\n文字詳細設定：Enter 儲存，Shift+Enter 換行\n模板欄位：{{欄位名稱}}\n\n自動備份：每小時檢查，保留最近 14 份。\n資料位置：%LOCALAPPDATA%\\ClipShelf", "關於 ClipShelf"));
+        Add("關於 ClipShelf 2.15.8", () => MessageBox.Show(this, "ClipShelf 2.15.8\n本機剪貼庫 · 搜尋 · 整理 · 文字組合\n\nCtrl+~ 開啟 / 隱藏\nCtrl+F 搜尋，方向鍵選擇，Enter 貼上\n卡片原地編輯：Enter 換行，Ctrl+Enter 儲存，Esc 取消\n標題改名：Enter 儲存，Esc 取消\n文字詳細設定：Enter 儲存，Shift+Enter 換行\n模板欄位：{{欄位名稱}}\n\n自動備份：每小時檢查，保留最近 14 份。\n資料位置：%LOCALAPPDATA%\\ClipShelf", "關於 ClipShelf"));
         ShowProductMenu(menu, (FrameworkElement)sender);
     }
     private void ShowProductMenu(ContextMenu menu, FrameworkElement owner)

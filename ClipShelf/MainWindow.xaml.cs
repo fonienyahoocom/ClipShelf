@@ -50,6 +50,9 @@ public partial class MainWindow : Window
 
     private readonly ObservableCollection<ClipItem> _allItems = new();
     private readonly ObservableCollection<ClipItem> _visibleItems = new();
+    // Bound to the non-virtualizing grid ONLY: at most CardGridPaging.PageSize cards.
+    private readonly ObservableCollection<ClipItem> _gridPageItems = new();
+    private int _gridPageIndex;
     private readonly ObservableCollection<SidebarItem> _categories = new();
     private readonly List<string> _folderPaths = new();
     private readonly HistoryStore _store = new();
@@ -720,6 +723,7 @@ public partial class MainWindow : Window
             : items.OrderByDescending(x => x.LastUsedAt);
         _visibleItems.Clear();
         foreach (var item in items) { item.Compact = _settings.CompactView; item.SearchExcerpt = BuildExcerpt(item, query); _visibleItems.Add(item); }
+        if (_settings.GridLayout) RefreshGridPage(selectedId);
 
         SectionTitle.Text = (!string.IsNullOrWhiteSpace(query) && _settings.GlobalSearch && selectedCategory.Kind != "Trash") ? "搜尋全部內容" : SectionDisplayPath(selectedCategory);
         CountText.Text = $"{_visibleItems.Count:N0} 筆";
@@ -738,10 +742,11 @@ public partial class MainWindow : Window
 
         if (selectedId.HasValue)
         {
-            var same = _visibleItems.FirstOrDefault(x => x.Id == selectedId.Value);
+            var shown = _settings.GridLayout ? _gridPageItems : _visibleItems;
+            var same = shown.FirstOrDefault(x => x.Id == selectedId.Value);
             if (same != null) HistoryList.SelectedItem = same;
         }
-        if (HistoryList.SelectedIndex < 0 && _visibleItems.Count > 0) HistoryList.SelectedIndex = 0;
+        if (HistoryList.SelectedIndex < 0 && HistoryList.Items.Count > 0) HistoryList.SelectedIndex = 0;
     }
 
     private void QueueSave()

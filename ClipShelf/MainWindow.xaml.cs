@@ -123,6 +123,13 @@ public partial class MainWindow : Window
 
         var loaded = _store.Load();
         _settings = loaded.Settings ?? new AppSettings();
+        // One-time recovery for 2.15.7 installations that persisted the broken grid.
+        // Reopen safely in vertical mode, then let the user opt back into fixed paging.
+        if (_settings.GridLayoutVersion < 1)
+        {
+            _settings.GridLayout = false;
+            _settings.GridLayoutVersion = 1;
+        }
         ApplyCardLayout();
         _capturePaused = _settings.CapturePaused;
         _switchNonInterferenceMode = _settings.SwitchNonInterferenceMode;

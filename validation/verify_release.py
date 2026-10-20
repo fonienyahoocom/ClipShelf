@@ -141,12 +141,13 @@ check('GetBool(Settings, "PreferQuickPicker", true)' in (s/'ClipShelf.Core/CoreS
       'Core uses persisted legacy-safe mode while preserving prior history schema')
 settings_code=(s/'ClipShelf/AppSettings.cs').read_text()
 card_code=(s/'ClipShelf/CardInteractions.cs').read_text()
-check('GridLayout { get; set; } = false' in settings_code and 'GridLayout = GridLayout' in settings_code,
+check('GridLayout { get; set; } = false' in settings_code and 'GridLayout = GridLayout' in settings_code and
+      'GridLayoutVersion = GridLayoutVersion' in settings_code and 'if (_settings.GridLayoutVersion < 1)' in manager_keys,
       'grid layout setting has independent default and clone persistence')
 check('GridCardPanel' in xaml and 'VerticalCardPanel' in xaml and 'Content="▦ 方塊"' in xaml
       and 'Content="☰ 直排"' in xaml and 'CardColumnWidthConverter' in xaml,
       'both card arrangements and responsive converter present in WPF manager')
-check('ResolveInlineEdit()' in card_code and 'HistoryList.ScrollIntoView(anchorItem)' in card_code
+check('ResolveInlineEdit()' in card_code and 'HistoryList.ScrollIntoView(anchor)' in card_code
       and 'item.IsContentExpanded = true' in card_code,
       'layout switch respects inline draft, restores scroll neighborhood, supports expanded text')
 paging_source=(s/'ClipShelf/CardGridPaging.cs').read_text()

@@ -107,6 +107,8 @@ try {
     Check(rejected && edit.Title=="","deleted record cannot be renamed until restored");edit.IsDeleted=false;
     // Real paging math exercised on a simulated full 10,000-card history.
     var hugeGridData=Enumerable.Range(0,10000).ToArray();
+    Check(CardGridPaging.TakePage(new[]{1,2,3},0).SequenceEqual(new[]{1,2,3}),
+        "small three-card folder remains a single complete grid page");
     Check(CardGridPaging.TakePage(hugeGridData,0).SequenceEqual(Enumerable.Range(0,24)),
         "grid initial projection renders only 24 of 10000 records");
     Check(CardGridPaging.PageCount(10000)==417 &&
@@ -119,6 +121,9 @@ try {
     Check(CardGridPaging.ClampPage(999,2)==0 && CardGridPaging.TakePage(Array.Empty<int>(),5).Count==0,
         "page clamping is safe after filters shrink and with empty results");
     var oldLayout=JsonSerializer.Deserialize<AppSettings>("{}")!;
+    Check(oldLayout.GridLayoutVersion==0 && oldLayout.Clone().GridLayoutVersion==0 &&
+          new AppSettings {GridLayoutVersion=1,GridLayout=true}.Clone().GridLayout,
+        "2.15.7 grid preference can migrate to vertical once while new grid persists");
     Check(!new AppSettings().GridLayout && !oldLayout.GridLayout,"legacy manager remains vertical");
     var gridSettings=new AppSettings {GridLayout=true,CompactView=true,PreferQuickPicker=false};
     var gridReload=JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(gridSettings.Clone()))!;

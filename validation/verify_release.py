@@ -160,6 +160,13 @@ check('RefreshGridPage(selectedId)' in manager_keys and 'GridPrevious_Click' in 
       'grid paging wired to refresh and next/previous without losing draft safeguards')
 check('return _settings.GridLayout ? _gridPageItems : _visibleItems;' in manager_keys,
       'grid select-all is restricted to the visible bounded page, not hidden cards')
+check('HistoryList.Tag = _settings.GridLayout ? CardGridPaging.GridTag : CardGridPaging.ListTag;' in card_code,
+      'runtime assigns Grid or List string to WPF object-typed Tag')
+check(xaml.count('Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="Grid"') == 4
+      and 'Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True"' not in xaml,
+      'all four grid width and preview triggers compare string Grid instead of bool True')
+check('CardGridPaging.CardWidth' in card_code and 'public static double CardWidth' in paging_source,
+      'WPF responsive width calculation covered by headless tests')
 test=(s/'validation/tests.log').read_text()
 totals=[int(x) for x in re.findall(r'PASSED (\d+) CHECKS', test)]
 check(bool(totals) and max(totals) >= 86,

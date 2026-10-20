@@ -106,6 +106,14 @@ try {
     edit.IsDeleted=true;rejected=false;try {ClipEditing.SaveTitle(edit,"不得改名",PersistEdit);} catch(InvalidOperationException) {rejected=true;}
     Check(rejected && edit.Title=="","deleted record cannot be renamed until restored");edit.IsDeleted=false;
     // Real paging math exercised on a simulated full 10,000-card history.
+    Check(CardGridPaging.GridTag == "Grid" && CardGridPaging.ListTag == "List",
+        "WPF object Tag grid/list tokens use string values, not booleans");
+    Check(CardGridPaging.CardWidth(754, false) > 300 &&
+          2 * CardGridPaging.CardWidth(754, false) + 16 < 754 &&
+          CardGridPaging.CardWidth(754, true) > 690,
+        "recorded 754px list has two card widths and full-width edit");
+    Check(CardGridPaging.CardWidth(510, false) > 420,
+        "narrow lists remain single readable column");
     var hugeGridData=Enumerable.Range(0,10000).ToArray();
     Check(CardGridPaging.TakePage(new[]{1,2,3},0).SequenceEqual(new[]{1,2,3}),
         "small three-card folder remains a single complete grid page");

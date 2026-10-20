@@ -355,14 +355,14 @@
                                     <DataTrigger Binding="{Binding Compact}" Value="True">
                                         <Setter Property="Margin" Value="0,0,0,4"/>
                                     </DataTrigger>
-                                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
+                                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="Grid">
                                         <Setter Property="Width" Value="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource CardColumnWidthConverter}, ConverterParameter=Half}"/>
                                         <Setter Property="Margin" Value="0,0,8,8"/>
                                         <Setter Property="MinHeight" Value="116"/>
                                     </DataTrigger>
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True"/>
+                                            <Condition Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="Grid"/>
                                             <Condition Binding="{Binding IsInlineEditing}" Value="True"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Width" Value="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource CardColumnWidthConverter}, ConverterParameter=Full}"/>
@@ -559,7 +559,7 @@
                                                     <DataTrigger Binding="{Binding Compact}" Value="True">
                                                         <Setter Property="Margin" Value="0,4,4,0"/>
                                                     </DataTrigger>
-                                                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
+                                                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="Grid">
                                                         <Setter Property="MaxHeight" Value="54"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsContentExpanded}" Value="True">
@@ -587,7 +587,7 @@
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                             <Style.Triggers>
                                                 <MultiDataTrigger><MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True"/>
+                                                    <Condition Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="Grid"/>
                                                     <Condition Binding="{Binding Kind}" Value="Text"/>
                                                     <Condition Binding="{Binding IsContentExpanded}" Value="False"/>
                                                     <Condition Binding="{Binding IsInlineEditing}" Value="False"/>

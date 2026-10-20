@@ -62,7 +62,9 @@ public partial class MainWindow
             HistoryList.ItemsPanel = (ItemsPanelTemplate)FindResource("VerticalCardPanel");
             HistoryList.ItemsSource = _visibleItems;
         }
-        HistoryList.Tag = _settings.GridLayout;
+        // ListBox.Tag is object typed. Comparing a bool here with a XAML
+        // string trigger can leave grid card widths at full-row size.
+        HistoryList.Tag = _settings.GridLayout ? CardGridPaging.GridTag : CardGridPaging.ListTag;
         GridPagingPanel.Visibility = _settings.GridLayout ? Visibility.Visible : Visibility.Collapsed;
         SyncCardLayoutControls();
         UpdateGridPagerControls();
@@ -457,11 +459,9 @@ public sealed class CardColumnWidthConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        var width = value is double w && double.IsFinite(w) ? w : 500d;
-        var available = Math.Max(180d, width - 34d);
-        if (string.Equals(parameter?.ToString(), "Full", StringComparison.Ordinal) || available < 580d)
-            return Math.Max(160d, available - 8d);
-        return Math.Max(120d, (available - 16d) / 2d);
+        var width = value is double w ? w : 500d;
+        return CardGridPaging.CardWidth(width,
+            string.Equals(parameter?.ToString(), "Full", StringComparison.Ordinal));
     }
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => Binding.DoNothing;

@@ -158,6 +158,8 @@ check('PageSize = 24' in paging_source and 'TakePage<T>' in paging_source and
 check('RefreshGridPage(selectedId)' in manager_keys and 'GridPrevious_Click' in xaml and
       'GridNext_Click' in xaml and 'ResolveInlineEdit()' in card_code,
       'grid paging wired to refresh and next/previous without losing draft safeguards')
+check('return _settings.GridLayout ? _gridPageItems : _visibleItems;' in manager_keys,
+      'grid select-all is restricted to the visible bounded page, not hidden cards')
 test=(s/'validation/tests.log').read_text()
 totals=[int(x) for x in re.findall(r'PASSED (\d+) CHECKS', test)]
 check(bool(totals) and max(totals) >= 86,

@@ -53,7 +53,6 @@ static class Program
             foreach (var pair in brushes)
                 app.Resources[pair.Key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(pair.Value));
             Stage("after WPF Application; before MainWindow");
-            Environment.SetEnvironmentVariable("CLIPSHELF_GEOMETRY_TEST","1");
 
             var window = new MainWindow { Width = 1120, Height = 780, ShowInTaskbar = false };
             Stage("after MainWindow construction");
@@ -95,6 +94,58 @@ static class Program
             Pump(window);
             Verify(window, list, "wide-restores-two-columns", true, true);
 
+            // Real WPF content controls, not a model mock: expansion must not
+            // overlap columns, and a native TextBox edit must widen only its row.
+            var firstItem = items[0];
+            firstItem.IsContentExpanded = true;
+            Pump(window);
+            Verify(window, list, "expanded-long-preview", true, true);
+            firstItem.IsContentExpanded = false;
+            firstItem.DraftText = firstItem.Text;
+            firstItem.IsEditingText = true;
+            Pump(window);
+            var editRow = list.ItemContainerGenerator.ContainerFromIndex(0) as ListBoxItem
+                ?? throw new Exception("editing card row missing");
+            var neighborRow = list.ItemContainerGenerator.ContainerFromIndex(1) as ListBoxItem
+                ?? throw new Exception("next card row missing");
+            var editY = editRow.TransformToAncestor(list).Transform(new Point()).Y;
+            var neighborY = neighborRow.TransformToAncestor(list).Transform(new Point()).Y;
+            Assert(editRow.ActualWidth > neighborRow.ActualWidth * 1.5,
+                "editing card expands to nearly one full grid row");
+            Assert(neighborY >= editY + editRow.ActualHeight - 2,
+                "next card wraps below expanded editor without overlapping it");
+            Evidence.Add(new { step = "editing-full-width", editorWidth = editRow.ActualWidth,
+                neighborWidth = neighborRow.ActualWidth, editorY = editY, neighborY });
+
+            var editor = FindVisual<TextBox>(editRow, box => box.Name == "ClipSelectableText")
+                ?? throw new Exception("real native body editor not found");
+            Assert(!editor.IsReadOnly && editor.IsUndoEnabled,
+                "real WPF TextBox becomes editable with undo enabled");
+            var before = editor.Text;
+            editor.Focus();
+            editor.Select(2, 2);
+            editor.SelectedText = "";
+            Assert(editor.Text == before.Remove(2, 2),
+                "native selection Delete removes selected characters only");
+            Assert(firstItem.DraftText == editor.Text && firstItem.Text == before,
+                "unsaved edit remains draft and never changes saved body");
+            Assert(editor.CanUndo, "native TextBox offers Ctrl+Z equivalent undo history");
+            editor.Undo();
+            Assert(editor.Text == before && firstItem.Text == before,
+                "native TextBox undo restores original selected characters");
+            firstItem.IsEditingText = false;
+            firstItem.DraftText = "";
+            Pump(window);
+            Verify(window, list, "after-edit-return-grid", true, true);
+
+            // A/B density must remain independent from grid/list mode.
+            Press(window, "CompactViewButton");
+            Pump(window);
+            Verify(window, list, "compact-density-grid", true, true);
+            Press(window, "StandardViewButton");
+            Pump(window);
+            Verify(window, list, "standard-density-grid", true, true);
+
             // The non-virtualized card panel must NEVER see the full history.
             items.Clear();
             for (int i = 0; i < 63; i++)
@@ -109,6 +160,16 @@ static class Program
             Evidence.Add(new { step = "sixty-three-records", loaded = list.Items.Count,
                 sourceCount = items.Count, pass = true });
             Verify(window, list, "many-records-grid", true, true);
+            var nextButton = (Button?)window.FindName("GridNextButton")
+                ?? throw new Exception("real next-page control missing");
+            nextButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent, nextButton));
+            Pump(window);
+            Assert(list.Items.Count == 24 && ((TextBlock)window.FindName("GridPageText")).Text == "2 / 3 頁",
+                "real next-page click renders page 2 of 3 without duplicating cards");
+            nextButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent, nextButton));
+            Pump(window);
+            Assert(list.Items.Count == 15 && ((TextBlock)window.FindName("GridPageText")).Text == "3 / 3 頁",
+                "real last-page click displays remaining 15 records");
 
             Stage("all layout verifications finished");
             Console.WriteLine($"WPF GEOMETRY PASS: {Assertions} actual-window assertions");

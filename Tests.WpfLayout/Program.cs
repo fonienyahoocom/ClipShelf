@@ -38,9 +38,20 @@ static class Program
         try
         {
             Stage("before WPF Application");
-            var app = new App();
-            app.InitializeComponent();
+            // Never instantiate ClipShelf.App here: its OnStartup launches a SECOND
+            // MainWindow when the test pumps Dispatcher, competing for UiServer.
+            // A plain WPF Application plus exact production resource values allows
+            // the actual MainWindow and templates to be tested once in isolation.
+            var app = new System.Windows.Application();
             app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var brushes = new Dictionary<string, string>
+            {
+                ["AccentBrush"] = "#0D9488", ["AccentSoftBrush"] = "#CCFBF1",
+                ["TextBrush"] = "#16202A", ["MutedBrush"] = "#708090",
+                ["LineBrush"] = "#E5E7EB", ["SurfaceBrush"] = "#F8FAFC"
+            };
+            foreach (var pair in brushes)
+                app.Resources[pair.Key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(pair.Value));
             Stage("after WPF Application; before MainWindow");
             Environment.SetEnvironmentVariable("CLIPSHELF_GEOMETRY_TEST","1");
 

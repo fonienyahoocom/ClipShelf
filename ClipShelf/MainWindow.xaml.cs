@@ -4011,7 +4011,9 @@ public partial class MainWindow : Window
         var section = CurrentSection();
         // History entries are now independent from ownership; selecting all is safe
         // because organized items are only removed from History, not destroyed.
-        return _visibleItems;
+        // A grid page is intentionally bounded; "全選" must not silently mark
+        // hundreds of unseen cards on other pages.
+        return _settings.GridLayout ? _gridPageItems : _visibleItems;
     }
 
     private void SelectAllButton_Click(object sender, RoutedEventArgs e)

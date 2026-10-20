@@ -59,22 +59,13 @@ check(all('..' not in x.split('\\') and not x.startswith('\\') for x in deletes)
 nsi=(s/'installer/ClipShelf.nsi').read_text()
 check('InstallDir "$LOCALAPPDATA\\Programs\\ClipShelf"' in nsi and not re.search(r'^(Delete|RMDir).*LOCALAPPDATA',nsi,re.M), 'installer leaves separate personal data path intact')
 check('Call CheckClosed' in nsi and 'Call un.CheckClosed' in nsi and 'ClipShelf.Core.SingleInstance' in nsi, 'install/uninstall require clean Core shutdown')
-# 2.15.6 intentionally adds only a read-only preference projection in CoreStateStore.
-# All existing persistence, backup, history and data schema code remains byte-identical.
+# 2.15.7 updates manager layout, without touching Core or protected history/data classes.
 protected=('ClipShelf/HistoryStore.cs','ClipShelf/BackupService.cs','ClipShelf/ClipItem.cs',
            'ClipShelf/ClipEditing.cs','Shared/SafeState.cs','Shared/AutoBackup.cs')
 for relative in protected:
-    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to 2.15.5 baseline')
-core_delta='''    public bool PreferQuickPicker
-    {
-        get { lock (_sync) return GetBool(Settings, "PreferQuickPicker", true); }
-    }
-
-'''
-base_core=(b/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig')
-current_core=(s/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig')
-check(current_core.count(core_delta)==1 and current_core.replace(core_delta,'')==base_core,
-      'CoreStateStore adds only preference read-through, no changes to existing disk data handling')
+    check((s/relative).read_bytes() == (b/relative).read_bytes(), relative+' byte-identical to 2.15.6 baseline')
+check((s/'ClipShelf.Core/CoreStateStore.cs').read_bytes() == (b/'ClipShelf.Core/CoreStateStore.cs').read_bytes(),
+      'CoreStateStore byte-identical to 2.15.6 manager baseline')
 check('Read(path); // Never replace' in (s/'Shared/SafeState.cs').read_text(), 'fail-closed write revalidates existing history before replace')
 for filename in ('BUILD_EXE.cmd','BUILD_SETUP.cmd'):
     data=(s/filename).read_bytes()
@@ -148,6 +139,16 @@ check('開啟完整管理  ✓' in core_mode and '開啟快捷選取  ✓' in co
       'tray and bubble show the chosen mode with an end-of-label black check')
 check('GetBool(Settings, "PreferQuickPicker", true)' in (s/'ClipShelf.Core/CoreStateStore.cs').read_text(encoding='utf-8-sig'),
       'Core uses persisted legacy-safe mode while preserving prior history schema')
+settings_code=(s/'ClipShelf/AppSettings.cs').read_text()
+card_code=(s/'ClipShelf/CardInteractions.cs').read_text()
+check('GridLayout { get; set; } = false' in settings_code and 'GridLayout = GridLayout' in settings_code,
+      'grid layout setting has independent default and clone persistence')
+check('GridCardPanel' in xaml and 'VerticalCardPanel' in xaml and 'Content="▦ 方塊"' in xaml
+      and 'Content="☰ 直排"' in xaml and 'CardColumnWidthConverter' in xaml,
+      'both card arrangements and responsive converter present in WPF manager')
+check('ResolveInlineEdit()' in card_code and 'HistoryList.ScrollIntoView(anchorItem)' in card_code
+      and 'item.IsContentExpanded = true' in card_code,
+      'layout switch respects inline draft, restores scroll neighborhood, supports expanded text')
 test=(s/'validation/tests.log').read_text()
 totals=[int(x) for x in re.findall(r'PASSED (\d+) CHECKS', test)]
 check(bool(totals) and max(totals) >= 86,

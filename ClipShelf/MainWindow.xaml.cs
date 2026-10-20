@@ -120,6 +120,7 @@ public partial class MainWindow : Window
 
         var loaded = _store.Load();
         _settings = loaded.Settings ?? new AppSettings();
+        ApplyCardLayout();
         _capturePaused = _settings.CapturePaused;
         _switchNonInterferenceMode = _settings.SwitchNonInterferenceMode;
 

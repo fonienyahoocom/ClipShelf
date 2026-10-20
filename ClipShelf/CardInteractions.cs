@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Globalization;
+using System.Windows.Data;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -35,6 +37,66 @@ public partial class MainWindow
                 !BeginInlineTextEdit((ClipItem)text.DataContext, text)) e.Handled = true;
             _inlineCompositionBox = null;
         });
+    }
+
+    private void CardLayout_Click(object sender, RoutedEventArgs e)
+        => SetGridLayout(ReferenceEquals(sender, GridLayoutButton));
+
+    private void SyncCardLayoutControls()
+    {
+        VerticalLayoutButton.IsChecked = !_settings.GridLayout;
+        GridLayoutButton.IsChecked = _settings.GridLayout;
+    }
+
+    private void ApplyCardLayout()
+    {
+        HistoryList.Tag = _settings.GridLayout;
+        HistoryList.ItemsPanel = (ItemsPanelTemplate)FindResource(_settings.GridLayout ? "GridCardPanel" : "VerticalCardPanel");
+        SyncCardLayoutControls();
+    }
+
+    private void SetGridLayout(bool grid)
+    {
+        if (_settings.GridLayout == grid) { SyncCardLayoutControls(); return; }
+        // Switching panels can recycle native editor controls. Resolve changes first.
+        if (!ResolveInlineEdit()) { SyncCardLayoutControls(); return; }
+        var viewer = FindVisualChild<ScrollViewer>(HistoryList);
+        var offset = viewer?.VerticalOffset ?? 0;
+        ClipItem? anchorItem = null;
+        var panel = FindVisualChild<VirtualizingStackPanel>(HistoryList) as Panel
+            ?? FindVisualChild<WrapPanel>(HistoryList);
+        if (panel != null)
+        {
+            foreach (var row in panel.Children.OfType<ListBoxItem>())
+            {
+                if (row.DataContext is not ClipItem clip) continue;
+                try
+                {
+                    var y = row.TransformToAncestor(HistoryList).Transform(new Point()).Y;
+                    if (y + row.ActualHeight > 0 && y < HistoryList.ActualHeight)
+                    { anchorItem = clip; break; }
+                }
+                catch (InvalidOperationException) { }
+            }
+        }
+        _settings.GridLayout = grid;
+        ApplyCardLayout();
+        QueueSave();
+        // Keep the visible neighborhood and selection identity stable across the panel change.
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            HistoryList.UpdateLayout();
+            if (anchorItem != null && _visibleItems.Contains(anchorItem))
+                HistoryList.ScrollIntoView(anchorItem);
+            else FindVisualChild<ScrollViewer>(HistoryList)?.ScrollToVerticalOffset(offset);
+        }), DispatcherPriority.Loaded);
+    }
+
+    private void ExpandContentButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is ClipItem item && item.Kind == "Text")
+            item.IsContentExpanded = true;
+        e.Handled = true;
     }
 
     private void ViewMode_Click(object sender, RoutedEventArgs e)
@@ -321,4 +383,19 @@ public partial class MainWindow
     {
         if (sender is TextBox box) { ShowInlineTextMenu(box); e.Handled = true; }
     }
+}
+
+/// <summary>Grid cards fit two columns or a single column in a narrow manager window.</summary>
+public sealed class CardColumnWidthConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var width = value is double w && double.IsFinite(w) ? w : 500d;
+        var available = Math.Max(180d, width - 34d);
+        if (string.Equals(parameter?.ToString(), "Full", StringComparison.Ordinal) || available < 580d)
+            return Math.Max(160d, available - 8d);
+        return Math.Max(120d, (available - 16d) / 2d);
+    }
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => Binding.DoNothing;
 }

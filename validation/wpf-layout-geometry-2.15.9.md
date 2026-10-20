@@ -1,28 +1,44 @@
-# ClipShelf 2.15.9｜原生 WPF 版面座標驗證
+# ClipShelf 方塊單欄故障｜Windows WPF 實測與因果反證
 
-驗證狀態：2.15.9 的雙欄基本排列已在 Windows GitHub Actions 原生 STA／Dispatcher 視窗測試中通過；使用者本機、DPI 125% 和完整人工操作仍待驗收。
+**狀態：使用者故障尚未找到根因，PR #8 維持候選／不合併。**
 
-## 來源與重現
+## 1. 已有的使用者實機現象
 
-- 工程：`fonienyahoocom/ClipShelf`，修復分支 `fix/grid-two-column-trigger-2.15.9`，PR #8。
-- 修補線索：2026-10-21 使用者影片顯示方塊按鈕與頁碼已變更，但卡片保持直排。
-- 前一版的 WPF ListBox.Tag 傳 bool，XAML DataTrigger 以字串 True 比對。2.15.9 改用雙方同為 Grid/List 字串。這是原始碼可驗證的型別契約修正；是否為原先單欄故障唯一根因，仍須對照舊版同環境幾何實測。
-- 原生測試方式：Windows Server 2022 runner、STA 執行緒、真正 MainWindow XAML、Window.Show()、Dispatcher.Measure/Arrange、實際 RadioButton 路由 Click、ItemContainerGenerator/TransformToAncestor 讀取卡片位置。使用三張合成短句，沒有取用或記錄使用者正文。
+使用者 2026-10-21 影片：在「快速用語 → 語音回話」選取「▦ 方塊」，按鈕變成已選取、出現 `1/1 頁`，但卡片仍然垂直堆疊、占滿整列。另一個「歷史」畫面有 503 筆資料，仍須區分舊版曾發生的按鈕無回應／當機與單欄顯示問題。
 
-## 已取得的實際 WPF 幾何數值
+## 2. 對照方法
 
-來源：GitHub Actions 工作 `39511193145`，Commit `4461bbf3985c76fdc36b62db70480ef583ee3d0f`。以下為視窗寬 1120 DIP、DPI 比例 1.0 時：
+Windows Server 2022 GitHub Actions runner，執行**真正的 ClipShelf.MainWindow XAML、WPF ItemsPanel、ItemContainerStyle、TextBox**，而非只檢查模型或 XAML 字串。使用 STA、Dispatcher、Window.Show、原生 RadioButton Routed Click，量測 ItemContainerGenerator 生成之容器位置與 Width Binding 的有效來源。
 
-| 模式 | ItemsPanel | 清單寬度 | 卡片 1 (X,Y,寬) | 卡片 2 (X,Y,寬) |
-|---|---|---:|---|---|
-| 直排 | VirtualizingStackPanel | 833 | (1, 1, 831) | (1, 124.25, 831) |
-| 方塊 | WrapPanel | 833 | (1, 1, 391.5) | (400.5, 1, 391.5) |
-| 窄窗方塊 | WrapPanel | 429 | (1, 1, 387) | (1, 125, 387) |
+- 資料：三張合成短句、另有 63 筆分頁測試，不使用、輸出或修改使用者句庫正文。
+- 兩個版本使用同一份 `Tests.WpfLayout` 測試、同一 runner 與相同起始版面；由於測試程序可能保存上一個版面偏好，必須先**強制重置為直排**。
+- 對照執行：<https://github.com/fonienyahoocom/ClipShelf/actions/runs/39512934389>。
+- 2.15.9 完整 162 項原生 WPF 斷言與發行檢查成功執行：<https://github.com/fonienyahoocom/ClipShelf/actions/runs/39511863416>。
 
-方塊兩張卡片同 Y=1，第二張位於第一張右側，右邊界 792 小於 viewport 831。有效 Width 來源為 `StyleTrigger/expression=True/binding=Active`。驗證 20 次直排／方塊往返、由窄回寬、多筆 24 筆分頁上限；該輪 137 項原生視窗斷言通過。
+## 3. A／B 實測結果：2.15.8 與 2.15.9 完全相同
 
-## 額外驗收與邊界
+兩版在 100% DPI、1120 DIP 視窗、833 DIP 清單內均得到：
 
-後續新增原生 WPF 编辑卡片全寬、文字局部刪除、Undo、A/B 密度、分頁下一頁測試。它們的測試結果以後續 CI 實際 log 為準，不能預先寫成通過。
+| 狀態 | 實際 ItemsPanel | 卡片 1 (X,Y,寬) | 卡片 2 (X,Y,寬) |
+|---|---|---|---|
+| 直排 | VirtualizingStackPanel | (1, 1, 831) | (1, 124.25, 831) |
+| 方塊 | WrapPanel | (1, 1, 391.5) | (400.5, 1, 391.5) |
+| 窄窗方塊（清單寬 429） | WrapPanel | (1, 1, 387) | (1, 125, 387) |
 
-尚未驗證使用者本機的中文輸入法、125% DPI、其他應用程式輸入焦點、持續多分鐘使用與既有 2.15.8 錯誤版本同場幾何對照。請在完成以前保持 PR 待驗收，不要只因 CI 綠燈就宣稱本機故障正式結案。
+兩版 `three-short-cards-wide` 的實際 Width 來源都為 `StyleTrigger/expression=True/binding=Active`；第二張卡片皆在第一張右方、不重疊、未超出 viewport。兩版 **均通過 162 項實際 WPF 視窗斷言**，包含 20 次切換、長文展開、編輯卡片全寬、選取文字局部刪除、Undo、A/B 密度與 63 筆分頁。
+
+因此：**先前判斷的「布林值／字串比對不一致導致雙欄失敗」不成立為已證實根因。** WPF 可能已替觸發條件做值轉換，或在這台 runner 上原本就能正確套用。2.15.9 的 Grid/List 字串改寫不具備解釋使用者影片故障的因果證據，不應宣稱已正式修復。
+
+## 4. 下一個能區分假說的檢查
+
+請在使用者**已安裝的實際 WPF UI 程序**取得低敏感的版面診斷（不記錄正文）：
+- 真正執行檔檔案版本、路徑、檔案 SHA-256、執行程序 PID 與載入 WPF runtime 版本。
+- 切換前後的 `GridLayout`、`HistoryList.Tag` 值與實際型別、RadioButton 狀態。
+- `ItemsPanel` 型別、ListBox / ScrollViewer viewport / Panel 實際寬度。
+- 第一至第三張外層 `ListBoxItem` 的 Effective `Width`、ActualWidth、Margin、MinWidth、`DependencyPropertyHelper.GetValueSource`、`BindingExpression.Status` 和相對清單 X/Y 座標。
+- DPI 比例，是否啟動編輯，是否有卡片處於 IsInlineEditing / IsContentExpanded。
+- 接續觀測 LayoutUpdated／SizeChanged 是否短時間重複；若卡死先取 UI thread stack，而非靠延時掩蓋。
+
+此診斷需要透過使用者授權的診斷候選版或安全的 Windows 原生偵錯方式取得。CI 的原生 WPF 測試雖有真實幾何，但不能代替使用者主機。
+
+**仍未測：** 使用者本機版本／安裝路徑、125% DPI、中文 IME、真實剪貼資料與長時間操作、卡頓時 UI thread stack。任何未測項都不得宣稱通過。

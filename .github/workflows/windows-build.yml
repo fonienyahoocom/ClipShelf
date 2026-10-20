@@ -64,6 +64,41 @@ jobs:
           if (Test-Path validation/layout-out.log) { Get-Content validation/layout-out.log | Select-Object -Last 60 }
           if (Test-Path validation/layout-err.log) { Get-Content validation/layout-err.log | Select-Object -Last 30 }
           if ($code -ne 0) { throw "Actual WPF geometry probe failed ($code)" }
+      # One-off causal comparison for PR #8 only; remove after collecting evidence.
+      - name: Compare old 2.15.8 real WPF geometry
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/grid-two-column-trigger-2.15.9'
+        timeout-minutes: 4
+        shell: pwsh
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+          DOTNET_NOLOGO: '1'
+        run: |
+          $old = Join-Path $env:GITHUB_WORKSPACE ".ci-baseline"
+          $project = Join-Path $old "Tests.WpfLayout"
+          New-Item -ItemType Directory -Path $project -Force | Out-Null
+          Copy-Item Tests.WpfLayout/Program.cs "$project/Program.cs" -Force
+          Copy-Item Tests.WpfLayout/Tests.WpfLayout.csproj "$project/Tests.WpfLayout.csproj" -Force
+          dotnet build "$project/Tests.WpfLayout.csproj" --configuration Release *> validation/layout-old-build.log
+          $compile = $LASTEXITCODE
+          Get-Content validation/layout-old-build.log | Select-Object -Last 15
+          if ($compile -ne 0) { throw "2.15.8 baseline harness compilation failed, comparison unavailable" }
+          $exe = Join-Path $project "bin/Release/net8.0-windows/Tests.WpfLayout.exe"
+          $p = Start-Process -FilePath $exe -WorkingDirectory $old -PassThru -NoNewWindow -RedirectStandardOutput "$env:GITHUB_WORKSPACE/validation/layout-old-out.log" -RedirectStandardError "$env:GITHUB_WORKSPACE/validation/layout-old-err.log"
+          if (!$p.WaitForExit(60000)) { try { $p.Kill($true) } catch { }; throw "2.15.8 test timed out, cannot attribute failure" }
+          if (Test-Path "$old/validation/layout-geometry.json") {
+            Copy-Item "$old/validation/layout-geometry.json" validation/layout-old-geometry.json -Force
+          }
+          $stderr = Get-Content validation/layout-old-err.log -Raw
+          if ($p.ExitCode -eq 0) {
+            Get-Content validation/layout-old-out.log | Select-Object -Last 5
+            throw "2.15.8 ALSO PASSES two-column geometry: root-cause claim is falsified"
+          }
+          if ($stderr -notmatch 'three-short-cards-wide: first and second cards share the same Y row') {
+            Write-Host $stderr
+            throw "Old version failed for unrelated reason; root cause remains unproven"
+          }
+          Write-Host "CAUSAL COMPARISON: unchanged 2.15.8 fails real dual-column geometry as expected"
+          Get-Content validation/layout-old-out.log | Select-Object -First 4
       - name: Install Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:

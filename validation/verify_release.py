@@ -160,6 +160,9 @@ check('RefreshGridPage(selectedId)' in manager_keys and 'GridPrevious_Click' in 
       'grid paging wired to refresh and next/previous without losing draft safeguards')
 check('return _settings.GridLayout ? _gridPageItems : _visibleItems;' in manager_keys,
       'grid select-all is restricted to the visible bounded page, not hidden cards')
+check('TwoColumnAvailableThreshold = 420d' in paging_source
+      and 'CardGridPaging.CardWidth' in card_code,
+      'responsive grid width uses actual ListBox width with 420-DIP minimum for dual columns')
 test=(s/'validation/tests.log').read_text()
 totals=[int(x) for x in re.findall(r'PASSED (\d+) CHECKS', test)]
 check(bool(totals) and max(totals) >= 86,

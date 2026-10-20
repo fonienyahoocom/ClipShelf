@@ -337,7 +337,7 @@ internal static class PickerDiagnostics
             Directory.CreateDirectory(dir); var path = Path.Combine(dir, "picker-wake.csv");
             if (File.Exists(path) && new FileInfo(path).Length > 256000) File.Move(path, path + ".previous", true);
             using var p = Process.GetCurrentProcess();
-            File.AppendAllText(path, $"{DateTime.UtcNow:O},2.15.8,{Environment.ProcessId},{elapsed.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.WorkingSet64},{p.PrivateMemorySize64},{p.TotalProcessorTime.TotalMilliseconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n");
+            File.AppendAllText(path, $"{DateTime.UtcNow:O},2.15.10,{Environment.ProcessId},{elapsed.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.WorkingSet64},{p.PrivateMemorySize64},{p.TotalProcessorTime.TotalMilliseconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}\n");
         }
         catch { }
     }

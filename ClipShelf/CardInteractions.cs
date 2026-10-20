@@ -457,11 +457,9 @@ public sealed class CardColumnWidthConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        var width = value is double w && double.IsFinite(w) ? w : 500d;
-        var available = Math.Max(180d, width - 34d);
-        if (string.Equals(parameter?.ToString(), "Full", StringComparison.Ordinal) || available < 580d)
-            return Math.Max(160d, available - 8d);
-        return Math.Max(120d, (available - 16d) / 2d);
+        var width = value is double w ? w : 500d;
+        return CardGridPaging.CardWidth(width,
+            string.Equals(parameter?.ToString(), "Full", StringComparison.Ordinal));
     }
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => Binding.DoNothing;

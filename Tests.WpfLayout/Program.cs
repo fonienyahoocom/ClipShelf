@@ -107,6 +107,33 @@ static class Program
             window.Width = 755;
             Pump(window);
             Verify(window, list, "recorded-high-dpi-logical-width", true, true);
+
+            // Critical video regression: selection reveals edit/copy/remove controls
+            // in the root Grid's Auto column. On a 247-DIP card this used to
+            // starve the body column even though the outer card was two-column.
+            list.SelectedIndex = 0;
+            Pump(window);
+            var activeRow = list.ItemContainerGenerator.ContainerFromIndex(0) as ListBoxItem
+                ?? throw new Exception("selected card row missing");
+            var activeBody = FindVisual<TextBox>(activeRow, tb => tb.Name == "ClipSelectableText")
+                ?? throw new Exception("selected card TextBox missing");
+            var cardGrid = FindVisual<Grid>(activeRow, g => g.ColumnDefinitions.Count == 3 && g.RowDefinitions.Count == 5)
+                ?? throw new Exception("production 3-column card Grid missing");
+            var starWidth = cardGrid.ColumnDefinitions[1].ActualWidth;
+            var toolsWidth = cardGrid.ColumnDefinitions[2].ActualWidth;
+            var detail = new {
+                step = "selected-grid-card-body-width", activeRowWidth = activeRow.ActualWidth,
+                cardGridWidth = cardGrid.ActualWidth, starColumnWidth = starWidth,
+                toolsAutoColumnWidth = toolsWidth, textBoxWidth = activeBody.ActualWidth,
+                selection = activeRow.IsSelected, dpi = VisualTreeHelper.GetDpi(list).DpiScaleX,
+                textLength = activeBody.Text.Length,
+                widthSource = DependencyPropertyHelper.GetValueSource(activeBody, FrameworkElement.WidthProperty).BaseValueSource.ToString()
+            };
+            Evidence.Add(detail);
+            Console.WriteLine("SELECTED_TEXT_WIDTH " + JsonSerializer.Serialize(detail));
+            Assert(activeRow.IsSelected, "user-like grid card is selected");
+            Assert(activeBody.ActualWidth >= 100,
+                $"selected-grid text width collapsed: TextBox={activeBody.ActualWidth:F2}, star={starWidth:F2}, tools={toolsWidth:F2}, outer={activeRow.ActualWidth:F2}");
             window.Width = 1120;
             Pump(window);
             Verify(window, list, "after-recorded-width-reexpand", true, true);

@@ -106,6 +106,15 @@ try {
     edit.IsDeleted=true;rejected=false;try {ClipEditing.SaveTitle(edit,"不得改名",PersistEdit);} catch(InvalidOperationException) {rejected=true;}
     Check(rejected && edit.Title=="","deleted record cannot be renamed until restored");edit.IsDeleted=false;
     // Real paging math exercised on a simulated full 10,000-card history.
+    var userScaledWidth=468d; // ~1132px physical window at 150% UI scale
+    Check(CardGridPaging.TwoColumnAvailableThreshold == 420d
+          && CardGridPaging.CardWidth(userScaledWidth,false) > 190d
+          && 2 * (CardGridPaging.CardWidth(userScaledWidth,false) + 8d) <= userScaledWidth,
+        "recorded high-DPI narrow window has two readable columns within actual list width");
+    Check(CardGridPaging.CardWidth(429,false) > 380d,
+        "truly narrow window still falls back to one readable column");
+    Check(CardGridPaging.CardWidth(userScaledWidth,true) > 420d,
+        "inline editing retains the full row in narrow grid mode");
     var hugeGridData=Enumerable.Range(0,10000).ToArray();
     Check(CardGridPaging.TakePage(new[]{1,2,3},0).SequenceEqual(new[]{1,2,3}),
         "small three-card folder remains a single complete grid page");

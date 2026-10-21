@@ -40,6 +40,56 @@ jobs:
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 8.0.425
+      - name: Native WPF layout proof at recorded scaled window width
+        timeout-minutes: 4
+        shell: pwsh
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+          DOTNET_NOLOGO: '1'
+        run: |
+          dotnet build Tests.WpfLayout/Tests.WpfLayout.csproj --configuration Release *> validation/layout-build.log
+          if ($LASTEXITCODE -ne 0) { Get-Content validation/layout-build.log | Select-Object -Last 50; throw "WPF geometry harness build failed" }
+          $exe = Join-Path $env:GITHUB_WORKSPACE "Tests.WpfLayout/bin/Release/net8.0-windows/Tests.WpfLayout.exe"
+          $p = Start-Process -FilePath $exe -WorkingDirectory $env:GITHUB_WORKSPACE -PassThru -NoNewWindow -RedirectStandardOutput "validation/layout-new-out.log" -RedirectStandardError "validation/layout-new-err.log"
+          if (!$p.WaitForExit(60000)) { try { $p.Kill($true) } catch {}; throw "WPF geometry probe timed out" }
+          Get-Content validation/layout-new-out.log | Select-Object -Last 50
+          if ($p.ExitCode -ne 0) { Get-Content validation/layout-new-err.log; throw "New version did not produce valid two-column geometry" }
+          $json = Get-Content validation/layout-geometry.json -Raw | ConvertFrom-Json
+          $recorded = @($json.evidence | Where-Object { $_.step -eq 'recorded-high-dpi-logical-width' })[0]
+          if (!$recorded) { throw "Recorded-width geometry proof missing" }
+          Write-Host "NEW actual card positions: $($recorded.cardBounds[0].x),$($recorded.cardBounds[0].y) and $($recorded.cardBounds[1].x),$($recorded.cardBounds[1].y)"
+
+      - name: Prove baseline 2.15.8 stays single-column at same width
+        timeout-minutes: 4
+        shell: pwsh
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+          DOTNET_NOLOGO: '1'
+        run: |
+          $old = Join-Path $env:GITHUB_WORKSPACE ".ci-baseline"
+          $project = Join-Path $old "Tests.WpfLayout"
+          New-Item -ItemType Directory -Path $project -Force | Out-Null
+          Copy-Item Tests.WpfLayout/Program.cs "$project/Program.cs" -Force
+          Copy-Item Tests.WpfLayout/Tests.WpfLayout.csproj "$project/Tests.WpfLayout.csproj" -Force
+          dotnet build "$project/Tests.WpfLayout.csproj" --configuration Release *> validation/layout-old-build.log
+          if ($LASTEXITCODE -ne 0) { Get-Content validation/layout-old-build.log | Select-Object -Last 50; throw "Old harness did not compile" }
+          $exe = Join-Path $project "bin/Release/net8.0-windows/Tests.WpfLayout.exe"
+          $p = Start-Process -FilePath $exe -WorkingDirectory $old -PassThru -NoNewWindow -RedirectStandardOutput "$env:GITHUB_WORKSPACE/validation/layout-old-out.log" -RedirectStandardError "$env:GITHUB_WORKSPACE/validation/layout-old-err.log"
+          if (!$p.WaitForExit(60000)) { try { $p.Kill($true) } catch {}; throw "Old baseline hung; comparison inconclusive" }
+          if (!(Test-Path "$old/validation/layout-geometry.json")) { throw "Old geometry output missing" }
+          Copy-Item "$old/validation/layout-geometry.json" validation/layout-old-geometry.json -Force
+          $json = Get-Content validation/layout-old-geometry.json -Raw | ConvertFrom-Json
+          $oldRecorded = @($json.evidence | Where-Object { $_.step -eq 'recorded-high-dpi-logical-width' })[0]
+          if ($p.ExitCode -eq 0) { throw "2.15.8 also passed recorded-width dual-column: width hypothesis falsified" }
+          $err = Get-Content validation/layout-old-err.log -Raw
+          if ($err -notmatch 'recorded-high-dpi-logical-width: first and second cards share the same Y row') {
+            Get-Content validation/layout-old-err.log
+            throw "2.15.8 failed for unrelated reason; cannot claim cutoff is the cause"
+          }
+          if (!$oldRecorded) { throw "2.15.8 recorded-width sample missing" }
+          Write-Host "BASELINE FAILED AS PREDICTED at narrow logical width:"
+          Write-Host "OLD card1 x=$($oldRecorded.cardBounds[0].x), y=$($oldRecorded.cardBounds[0].y), w=$($oldRecorded.cardBounds[0].width)"
+          Write-Host "OLD card2 x=$($oldRecorded.cardBounds[1].x), y=$($oldRecorded.cardBounds[1].y), w=$($oldRecorded.cardBounds[1].width)"
       - name: Install Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
@@ -93,6 +143,8 @@ jobs:
           name: clipshelf-logs-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             validation/*.log
+            validation/layout-geometry.json
+            validation/layout-old-geometry.json
             validation/package-checks.json
             validation/commands.json
           if-no-files-found: warn

@@ -163,6 +163,9 @@ check('return _settings.GridLayout ? _gridPageItems : _visibleItems;' in manager
 check('TwoColumnAvailableThreshold = 420d' in paging_source
       and 'CardGridPaging.CardWidth' in card_code,
       'responsive grid width uses actual ListBox width with 420-DIP minimum for dual columns')
+check('Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"' in xaml
+      and '<ColumnDefinition Width="18"/>' in xaml,
+      'selected grid action toolbar has its own row and bounded right gutter')
 test=(s/'validation/tests.log').read_text()
 totals=[int(x) for x in re.findall(r'PASSED (\d+) CHECKS', test)]
 check(bool(totals) and max(totals) >= 86,

@@ -117,7 +117,7 @@ static class Program
                 ?? throw new Exception("selected card row missing");
             var activeBody = FindVisual<TextBox>(activeRow, tb => tb.Name == "ClipSelectableText")
                 ?? throw new Exception("selected card TextBox missing");
-            var cardGrid = FindVisual<Grid>(activeRow, g => g.ColumnDefinitions.Count == 3 && g.RowDefinitions.Count == 5)
+            var cardGrid = FindVisual<Grid>(activeRow, g => g.ColumnDefinitions.Count == 3 && g.RowDefinitions.Count >= 5)
                 ?? throw new Exception("production 3-column card Grid missing");
             var starWidth = cardGrid.ColumnDefinitions[1].ActualWidth;
             var toolsWidth = cardGrid.ColumnDefinitions[2].ActualWidth;
@@ -132,8 +132,20 @@ static class Program
             Evidence.Add(detail);
             Console.WriteLine("SELECTED_TEXT_WIDTH " + JsonSerializer.Serialize(detail));
             Assert(activeRow.IsSelected, "user-like grid card is selected");
-            Assert(activeBody.ActualWidth >= 100,
+            Assert(activeBody.ActualWidth >= cardGrid.ActualWidth * 0.55,
                 $"selected-grid text width collapsed: TextBox={activeBody.ActualWidth:F2}, star={starWidth:F2}, tools={toolsWidth:F2}, outer={activeRow.ActualWidth:F2}");
+            list.SelectedIndex = 1;
+            Pump(window);
+            var otherRow = list.ItemContainerGenerator.ContainerFromIndex(1) as ListBoxItem
+                ?? throw new Exception("second selected card missing");
+            var otherBody = FindVisual<TextBox>(otherRow, tb => tb.Name == "ClipSelectableText")
+                ?? throw new Exception("second selected TextBox missing");
+            Assert(otherBody.ActualWidth >= activeBody.ActualWidth - 3,
+                "selecting another card preserves body TextBox width");
+            Evidence.Add(new { step = "selected-second-card-text-width",
+                textBoxWidth = otherBody.ActualWidth, selected = otherRow.IsSelected });
+            list.SelectedIndex = 0;
+            Pump(window);
             window.Width = 1120;
             Pump(window);
             Verify(window, list, "after-recorded-width-reexpand", true, true);
